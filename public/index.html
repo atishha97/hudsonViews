@@ -1,0 +1,3235 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hudson Window</title>
+<style>
+/* --- Basis Grotesque Pro ---------------------------------------------------
+   Five static cuts, so the weight ranges below matter. This stylesheet asks for
+   560, 580, 600, 640 and 650; CSS matching for any target above 500 walks
+   upwards first, so every one of those would land on Bold and the Medium cut
+   would never be used at all. Declaring ranges instead pins the split where the
+   design puts it: card titles and labels take Medium, the aircraft name and the
+   eyebrow above it take Bold.
+
+   The files are the Arabic Pro cuts, which carry a complete Latin set — checked
+   against the cmap, including the → and · this page sets in routes and idents.
+   Only the weights actually used get fetched; Light and Black are declared for
+   completeness and cost nothing until something asks for them.
+   -------------------------------------------------------------------------- */
+@font-face {
+  font-family: "Basis Grotesque Pro";
+  src: url("fonts/BasisGrotesqueArabicPro-Light.ttf") format("truetype");
+  font-weight: 300; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Basis Grotesque Pro";
+  src: url("fonts/BasisGrotesqueArabicPro-Regular.ttf") format("truetype");
+  font-weight: 350 450; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Basis Grotesque Pro";
+  src: url("fonts/BasisGrotesqueArabicPro-Medium.ttf") format("truetype");
+  font-weight: 451 600; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Basis Grotesque Pro";
+  src: url("fonts/BasisGrotesqueArabicPro-Bold.ttf") format("truetype");
+  font-weight: 601 800; font-style: normal; font-display: swap;
+}
+@font-face {
+  font-family: "Basis Grotesque Pro";
+  src: url("fonts/BasisGrotesqueArabicPro-Black.ttf") format("truetype");
+  font-weight: 801 900; font-style: normal; font-display: swap;
+}
+
+/* ---------------------------------------------------------------------------
+   Tokens. Every colour in this file comes from here. Nothing is hardcoded.
+
+   --air and --water are load-bearing: air is always orange, water is always
+   teal, in both themes. That mapping is how the screen is read at a glance,
+   so it is the one thing that must never be themed away.
+   --------------------------------------------------------------------------- */
+:root {
+  color-scheme: light dark;
+
+  --air: #50611a;
+  --air-soft: #d4e0ae;
+  --air-wash: #f7f9f0;
+
+  --water: #0f766e;
+  --water-soft: #5eead4;
+  --water-wash: #effcfa;
+
+  --bg: #f6f6f4;
+  --surface: #ffffff;
+  --surface-2: #f0f0ed;
+  --ink: #1b1d1c;
+  --ink-2: #5b615e;
+  --ink-3: #8b918e;
+  --line: #dfe0dc;
+  --line-2: #ecedea;
+
+  --sky-top: #cfe0ea;
+  --sky-bottom: #eef3f6;
+  --sea-top: #b9cdd2;
+  --sea-bottom: #93aeb6;
+  --horizon-haze: #eaf1f4;
+  --haze: #ffffff;
+
+  --warn: #92400e;
+  --warn-bg: #fef3c7;
+
+  --radius: 10px;
+  /* Not a monospace stack any more. Basis carries tabular figures, so the one
+     thing the system mono was actually buying here, digits of equal width so
+     columns of distances line up, comes from the same typeface as everything
+     else. Measured: every digit 7.625px under font-variant-numeric:
+     tabular-nums, against a 4.4px spread without it. Every rule below that
+     uses --mono sets tabular-nums for that reason; drop it and "1.90 km" and
+     "10.7 km" stop aligning. */
+  --mono: "Basis Grotesque Pro", ui-sans-serif, -apple-system, "Segoe UI",
+          Roboto, Helvetica, Arial, sans-serif;
+  --sans: "Basis Grotesque Pro", ui-sans-serif, -apple-system, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --air: #c0d57b;
+    --air-soft: #3d4521;
+    --air-wash: #1e2112;
+
+    --water: #2dd4bf;
+    --water-soft: #12534d;
+    --water-wash: #0d2523;
+
+    --bg: #101211;
+    --surface: #181b1a;
+    --surface-2: #202423;
+    --ink: #e9ecea;
+    --ink-2: #a3aaa7;
+    --ink-3: #6f7774;
+    --line: #2b302e;
+    --line-2: #222725;
+
+    --sky-top: #0c1520;
+    --sky-bottom: #17242e;
+    --sea-top: #101c20;
+    --sea-bottom: #0a1114;
+  --horizon-haze: #1d2b36;
+    --haze: #1d2a33;
+
+    --warn: #fbbf24;
+    --warn-bg: #2b2210;
+  }
+}
+
+:root[data-theme="dark"] {
+  --air: #c0d57b;
+  --air-soft: #3d4521;
+  --air-wash: #1e2112;
+
+  --water: #2dd4bf;
+  --water-soft: #12534d;
+  --water-wash: #0d2523;
+
+  --bg: #101211;
+  --surface: #181b1a;
+  --surface-2: #202423;
+  --ink: #e9ecea;
+  --ink-2: #a3aaa7;
+  --ink-3: #6f7774;
+  --line: #2b302e;
+  --line-2: #222725;
+
+  --sky-top: #0c1520;
+  --sky-bottom: #17242e;
+  --sea-top: #101c20;
+  --sea-bottom: #0a1114;
+  --horizon-haze: #1d2b36;
+  --haze: #1d2a33;
+
+  --warn: #fbbf24;
+  --warn-bg: #2b2210;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.5 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.wrap {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding-block: 18px 40px;
+  padding-inline: 16px;
+}
+
+/* --- header ------------------------------------------------------------- */
+
+
+.status:empty { display: none; }
+.status-note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--warn);
+}
+.dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: none; }
+
+button.ghost {
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+button.ghost:hover { background: var(--surface-2); color: var(--ink); }
+button.ghost[aria-pressed="true"] { border-color: var(--ink-3); color: var(--ink); }
+
+/* --- the window --------------------------------------------------------- */
+
+.window {
+  position: relative;
+  border: 1px solid var(--glass-edge);
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--surface-2);
+  aspect-ratio: 16 / 7;
+  /* Width leads and height follows. A min-height here drove the width instead,
+     through the aspect ratio: 260px tall at 16:7 forced 594px wide, which burst
+     the panel out of the rail's column. The ratio itself has to stay 16:7,
+     because inWindow() filters against a fixed 16:7 frame and a pane drawn at
+     any other shape would disagree with it about what is on screen. */
+  width: 100%;
+  min-height: 0;
+}
+.window svg { display: block; width: 100%; height: 100%; }
+
+.window .empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+  text-align: center;
+  padding-inline: 24px;
+  /* Sits in the sky, not across the horizon line it used to bisect. */
+  bottom: 42%;
+}
+
+.marker { cursor: pointer; }
+.marker .hit { fill: transparent; }
+.mk-air { color: var(--air); }
+.mk-sea { color: var(--water); }
+.marker .body { fill: currentColor; }
+.marker .ring { fill: none; stroke: currentColor; stroke-width: 1.2; opacity: 0.55; }
+.marker .lead { stroke: currentColor; stroke-width: 1; opacity: 0.4; }
+.marker.sel .ring { opacity: 1; stroke-width: 2; }
+.marker .tag {
+  font: 500 10.5px/1 var(--sans);
+  fill: currentColor;
+  letter-spacing: 0.01em;
+  paint-order: stroke;
+  stroke: var(--haze);
+  stroke-width: 2px;
+  stroke-linejoin: round;
+  stroke-opacity: 0.55;
+}
+.marker .tag.dim { opacity: 0.75; font-size: 10px; }
+
+.grid-line { stroke: var(--ink-3); opacity: 0.2; stroke-width: 1; fill: none; }
+.grid-arc { stroke: var(--ink-3); opacity: 0.2; stroke-width: 1; fill: none; stroke-dasharray: 1 5; stroke-linecap: round; }
+/* No halo. A stroked outline behind small text is a way of forcing legibility
+   over a busy background; the sky here is a smooth gradient, so the halo was
+   buying nothing and costing the letterforms their shape. Contrast does the
+   work instead: smaller, tracked out, and set in the muted ink. */
+.frame-label {
+  font: 500 9.5px var(--sans);
+  fill: var(--ink-3);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.grid-label {
+  font: 9.5px var(--mono);
+  font-variant-numeric: tabular-nums;
+  fill: var(--ink-3);
+  letter-spacing: 0.02em;
+}
+/* A real horizon is not a drawn line, it is where haze stacks up until the sea
+   stops being distinguishable from the sky. The line is barely there; the band
+   above it does the work. */
+.horizon { stroke: var(--ink-2); opacity: 0.28; stroke-width: 1; shape-rendering: crispEdges; }
+
+/* --- the disclosure marker ------------------------------------------------
+   The native triangle is replaced by the uploaded plus, which turns 45 degrees
+   into a close cross when the panel is open. One asset does both states, and
+   the turn tells you the click did something.
+
+   It is drawn as a MASK rather than an <img>, so the artwork supplies only the
+   shape and the colour comes from `currentColor`. A black PNG would have had to
+   be inverted by hand for the dark theme, and would have ignored the hover
+   change on the summary; masked, it follows both for free.
+   -------------------------------------------------------------------------- */
+details.cal > summary,
+details.tech > summary { list-style: none; }
+details.cal > summary::-webkit-details-marker,
+details.tech > summary::-webkit-details-marker { display: none; }
+
+details.cal > summary::before,
+details.tech > summary::before {
+  content: '';
+  flex: none;
+  width: 11px;
+  height: 11px;
+  background-color: currentColor;
+  -webkit-mask: url("Plus.png") center / contain no-repeat;
+  mask: url("Plus.png") center / contain no-repeat;
+  transition: transform 180ms ease;
+}
+details.cal[open] > summary::before,
+details.tech[open] > summary::before { transform: rotate(45deg); }
+
+/* --- calibration -------------------------------------------------------- */
+
+details.cal {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+details.cal > summary {
+  cursor: pointer;
+  padding: 9px 14px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink);
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+details.cal > summary:hover { opacity: 0.66; }
+.cal-body {
+  padding: 4px 14px 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 14px 20px;
+}
+.field { display: grid; gap: 4px; }
+.field label { font-size: 11.5px; color: var(--ink-2); }
+.field .row { display: flex; align-items: center; gap: 8px; }
+.field input[type="number"] {
+  font: inherit;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--bg);
+  color: var(--ink);
+}
+/* --- the sliders ----------------------------------------------------------
+   Fully custom, which was not the first choice. `accent-color` alone gives the
+   two-tone fill for free, but Chrome paints a hairline around the unfilled part
+   of the track as part of its native rendering, and that outline is not
+   reachable from CSS: setting `border: none` on the track reports 0px and
+   changes nothing on screen, because the border property is not what draws it.
+
+   Going `appearance: none` removes the native painting and the outline with it,
+   at the cost of the fill, which then has to be rebuilt. The filled portion is a
+   hard-stopped gradient driven by `--fill`, set from the value in script; see
+   paintRange(). Firefox exposes ::-moz-range-progress and needs no such help.
+   -------------------------------------------------------------------------- */
+.field input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 16px;
+  background: none;
+  cursor: pointer;
+}
+.field input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border: none;
+  border-radius: 999px;
+  background: linear-gradient(
+    to right,
+    var(--ink-2) 0 var(--fill, 0%),
+    var(--track-empty) var(--fill, 0%) 100%);
+}
+.field input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -5px;            /* centres a 16px thumb on a 6px track */
+  border: none;
+  border-radius: 50%;
+  background: var(--ink-2);
+}
+.field input[type="range"]::-moz-range-track {
+  height: 6px; border: none; border-radius: 999px; background: var(--track-empty);
+}
+.field input[type="range"]::-moz-range-progress {
+  height: 6px; border: none; border-radius: 999px; background: var(--ink-2);
+}
+.field input[type="range"]::-moz-range-thumb {
+  width: 16px; height: 16px; border: none; border-radius: 50%; background: var(--ink-2);
+}
+.field .hint { font-size: 11px; color: var(--ink-3); }
+.field .hint.warn { color: var(--warn); }
+.cal-note {
+  grid-column: 1 / -1;
+  font-size: 11.5px;
+  color: var(--ink-2);
+  background: var(--warn-bg);
+  border-radius: 7px;
+  padding: 8px 10px;
+}
+.check { display: flex; align-items: flex-start; gap: 7px; font-size: 11.5px; color: var(--ink-2); }
+.check input { margin-top: 2px; accent-color: var(--ink-2); }
+
+/* --- the field ------------------------------------------------------------
+   The illustrated view that replaced the old instrument pane. It is a ground
+   plane seen obliquely, and it carries real geometry:
+
+     x  = where the aircraft is left-to-right across your field of view
+     y  = how far away it is (near at the bottom, distant toward the top)
+     size = the same perspective, times the aircraft's real size
+
+   Day and night, and the direction shadows fall, come from the actual position
+   of the sun at your latitude and longitude — not from the theme setting.
+   -------------------------------------------------------------------------- */
+
+.scene {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  min-height: 320px;
+  isolation: isolate;
+  background: var(--field-lo, #7fae57);
+  transition: background 1.2s linear;
+}
+
+.scene > .painting,
+.scene > svg { position: absolute; inset: 0; }
+
+.painting {
+  background:
+    radial-gradient(120% 90% at 50% 105%, var(--field-hi, #93c268) 0%, var(--field-lo, #7aa953) 70%);
+  transition: background 1.2s linear;
+}
+
+/* Paper grain, to match the illustration. A tiling turbulence texture, painted
+   once by the browser rather than regenerated on every frame. */
+.painting::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="180" height="180"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch"/></filter><rect width="180" height="180" filter="url(%23n)"/></svg>');
+  background-size: 180px 180px;
+  opacity: 0.3;
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.scene > .figure {
+  position: absolute;
+  left: var(--figure-x, 60%);
+  bottom: var(--figure-bottom, 22%);
+  height: var(--figure-h, 34%);
+  width: auto;
+  transform: translateX(-50%);
+  user-select: none;
+  -webkit-user-drag: none;
+  filter: var(--figure-filter, none);
+  transition: filter 1.2s linear;
+}
+
+.shadows, .ground { width: 100%; height: 100%; pointer-events: none; }
+.shadows { pointer-events: auto; }
+.plane-shadow { cursor: pointer; }
+/* Fill and opacity are set per frame from the sun's phase; no CSS fill here,
+   because a CSS fill property outranks the attribute and would win. */
+
+
+
+
+
+@media (max-width: 640px) {
+  .scene { aspect-ratio: 4 / 3; border-radius: 14px; }
+}
+
+/* --- what you're looking at right now ------------------------------------ */
+
+.now {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 18px 20px;
+}
+.now.air { border-left-color: var(--air); }
+.now.sea { border-left-color: var(--water); }
+.now .eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-weight: 650;
+  color: var(--ink-3);
+  margin-bottom: 7px;
+}
+.now.air .eyebrow { color: var(--air); }
+.now.sea .eyebrow { color: var(--water); }
+.now h2 {
+  margin: 0;
+  font-size: 23px;
+  line-height: 1.2;
+  font-weight: 640;
+  letter-spacing: -0.018em;
+}
+.now .facts li { font-size: 14.5px; color: var(--ink-2); padding-left: 17px; position: relative; }
+.now .facts li::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 8px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--ink-3);
+}
+.now .quiet { color: var(--ink-2); font-size: 16px; margin: 0; line-height: 1.45; }
+
+/* --- everything else, briefly -------------------------------------------- */
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(235px, 1fr)); gap: 10px; }
+.card {
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  padding: 12px 14px;
+  cursor: pointer;
+}
+.card:hover { background: var(--surface-2); }
+.card.air { border-left-color: var(--air); }
+.card.sea { border-left-color: var(--water); }
+.card .t { font-weight: 580; font-size: 14.5px; line-height: 1.3; }
+.card .w { font-size: 13px; color: var(--ink-2); margin-top: 3px; line-height: 1.4; }
+
+
+
+/* --- the technical view, folded away ------------------------------------- */
+
+details.tech {
+  margin-top: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+details.tech > summary {
+  cursor: pointer;
+  padding: 9px 14px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink);
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+details.tech > summary:hover { opacity: 0.66; }
+.tech-body { padding: 12px 14px 16px; }
+.tech-body .status { margin-bottom: 12px; }
+
+/* --- list --------------------------------------------------------------- */
+
+h2.sec {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--ink-3);
+  font-weight: 600;
+  margin: 22px 0 8px;
+}
+
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: 13px; }
+thead th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-3);
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+tbody td { padding: 8px 12px; border-bottom: 1px solid var(--line-2); vertical-align: top; }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: var(--surface-2); }
+tbody tr.sel { background: var(--surface-2); }
+tbody tr.air td:first-child { box-shadow: inset 3px 0 0 var(--air); }
+tbody tr.sea td:first-child { box-shadow: inset 3px 0 0 var(--water); }
+tbody tr.hidden-contact { opacity: 0.55; }
+
+.name { font-weight: 560; }
+.meta { color: var(--ink-3); font-size: 11.5px; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.looktech { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 12px; white-space: nowrap; }
+.looktech.air { color: var(--air); }
+.looktech.sea { color: var(--water); }
+.badge {
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--ink-3);
+  border: 1px solid var(--line);
+  margin-left: 5px;
+  vertical-align: 1px;
+}
+
+.empty-row { padding: 22px 12px; color: var(--ink-3); text-align: center; }
+
+
+/* --- the contact list -----------------------------------------------------
+   One row per contact, stacked, always. This used to be a five-column table
+   that turned into stacked cards below a 640px VIEWPORT, which was the right
+   idea keyed to the wrong measurement: the panel holding it is now pinned to
+   the rail's column width, about 360px, no matter how wide the screen is. A
+   620px table inside a 330px box does not stop being unreadable because the
+   monitor behind it is large. Five columns were being squeezed to around 60px
+   each, so "Sikorsky S-76" broke across two lines and "Boeing 737-800 ·
+   United" across three.
+
+   Stacked, each value gets the full width and labels its own field, so nothing
+   wraps mid-word and the sideways scroll is gone.
+   -------------------------------------------------------------------------- */
+.tablewrap { border: none; background: none; overflow: visible; }
+table { min-width: 0; width: 100%; }
+thead { display: none; }
+tbody, tbody tr, tbody td { display: block; }
+tbody tr {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin-bottom: 8px;
+  padding: 11px 13px;
+}
+tbody tr.air { border-left: 3px solid var(--air); }
+tbody tr.sea { border-left: 3px solid var(--water); }
+tbody td { border: none; padding: 2.5px 0; }
+tbody tr.air td:first-child, tbody tr.sea td:first-child { box-shadow: none; }
+tbody td:first-child { margin-bottom: 3px; }
+tbody td:not(:first-child) {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  font-size: 12.5px;
+}
+tbody td:not(:first-child)::before {
+  content: attr(data-label);
+  flex: none;
+  width: 62px;
+  color: var(--ink-3);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+}
+tbody td .meta { display: inline; margin-left: 6px; }
+.empty-row { display: block; }
+
+@media (max-width: 640px) {
+  /* Kept landscape on purpose. The vertical field of view is derived from the
+     pane's aspect ratio, which is what keeps pixels square and the projection
+     honest, so a portrait pane would imply a vertical field of view well over
+     120 degrees, which a flat rectilinear rendering stretches grotesquely. */
+  .window { aspect-ratio: 4 / 3; }
+}
+/* --- layout: the field fills the window, the panel floats over it ----------
+   The scene is the page. Everything readable sits in a rail down the left in
+   frosted panels, so the figure and whatever is crossing above him stay
+   visible to the right of it.
+   -------------------------------------------------------------------------- */
+
+:root {
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-bg-hi: rgba(255, 255, 255, 0.68);
+  --glass-sheen: rgba(255, 255, 255, 0.34);
+  --glass-sheen-end: rgba(255, 255, 255, 0);
+  --glass-line: rgba(255, 255, 255, 0.75);
+  --glass-underlight: rgba(255, 255, 255, 0.32);
+  --glass-edge: rgba(24, 40, 24, 0.09);
+  --glass-spec: rgba(255, 255, 255, 0.92);
+  --glass-spec-dim: rgba(255, 255, 255, 0.05);
+  --glass-contact: rgba(18, 38, 20, 0.16);
+  --glass-drop: rgba(18, 38, 20, 0.17);
+  --glass-filter: blur(22px) saturate(170%) brightness(1.10);
+  /* Dividers drawn ON a panel must be translucent ink, not a fixed light grey.
+     A panel is see-through, so its own lightness changes with whatever is
+     behind it: an opaque #ecedea rule read fine over grass and disappeared
+     completely where sky showed through the other end of the same card. This
+     darkens whatever it sits on by a constant amount instead. */
+  --rule-glass: rgba(24, 40, 24, 0.16);
+  --track-empty: rgba(24, 40, 24, 0.13);
+  --rail-w: 400px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --glass-bg: rgba(22, 27, 25, 0.52);
+    --glass-bg-hi: rgba(30, 37, 34, 0.64);
+    --glass-sheen: rgba(255, 255, 255, 0.08);
+    --glass-sheen-end: rgba(255, 255, 255, 0);
+    --glass-line: rgba(255, 255, 255, 0.17);
+    --glass-underlight: rgba(255, 255, 255, 0.05);
+    --glass-edge: rgba(0, 0, 0, 0.35);
+    --glass-spec: rgba(255, 255, 255, 0.36);
+    --glass-spec-dim: rgba(255, 255, 255, 0.03);
+    --glass-contact: rgba(0, 0, 0, 0.34);
+    --glass-drop: rgba(0, 0, 0, 0.38);
+    --glass-filter: blur(22px) saturate(160%) brightness(1.30);
+  --rule-glass: rgba(255, 255, 255, 0.14);
+  --track-empty: rgba(255, 255, 255, 0.16);
+  }
+}
+:root[data-theme="dark"] {
+  --glass-bg: rgba(22, 27, 25, 0.52);
+  --glass-bg-hi: rgba(30, 37, 34, 0.64);
+  --glass-sheen: rgba(255, 255, 255, 0.08);
+  --glass-sheen-end: rgba(255, 255, 255, 0);
+  --glass-line: rgba(255, 255, 255, 0.17);
+  --glass-underlight: rgba(255, 255, 255, 0.05);
+  --glass-edge: rgba(0, 0, 0, 0.35);
+  --glass-spec: rgba(255, 255, 255, 0.36);
+  --glass-spec-dim: rgba(255, 255, 255, 0.03);
+  --glass-contact: rgba(0, 0, 0, 0.34);
+  --glass-drop: rgba(0, 0, 0, 0.38);
+  --glass-filter: blur(22px) saturate(160%) brightness(1.30);
+  --rule-glass: rgba(255, 255, 255, 0.14);
+  --track-empty: rgba(255, 255, 255, 0.16);
+}
+
+/* --- liquid glass ---------------------------------------------------------
+   Four things together make a panel read as a lens rather than a grey
+   rectangle, and it needs all four:
+
+   1. The backdrop is blurred, saturated AND brightened. Blur alone gives you
+      frosted bathroom glass; the saturation and brightness lift are what make
+      it look like light is passing through rather than being stopped.
+   2. The fill is a gradient, not a flat wash — brighter along the top, where a
+      curved surface would catch the sky.
+   3. Light bounces in off both edges: an inset highlight along the top, and a
+      fainter one along the bottom from whatever the panel is sitting on.
+   4. A specular rim, brightest at two opposite corners. This is the giveaway
+      detail — a real glass edge does not glow evenly all the way round, it
+      catches the light where the curve turns towards the source.
+
+   The shadow is three layers, not one: a tight contact shadow that pins the
+   panel to the field, and two wider ambient ones. A single large blur reads as
+   a sticker with a drop shadow; the tight layer is what gives it thickness.
+   -------------------------------------------------------------------------- */
+.glass,
+.rail .now,
+.rail .card,
+.rail details.tech,
+.rail details.cal {
+  position: relative;
+  background-color: var(--glass-bg);
+  background-image: linear-gradient(
+    to bottom, var(--glass-sheen) 0%, var(--glass-sheen-end) 48%);
+  -webkit-backdrop-filter: var(--glass-filter);
+  backdrop-filter: var(--glass-filter);
+  border: 1px solid var(--glass-edge);
+  border-radius: 18px;
+  box-shadow:
+    0 1px 1px -0.5px var(--glass-contact),
+    0 5px 12px -5px var(--glass-drop),
+    0 18px 38px -14px var(--glass-drop),
+    inset 0 1px 0.5px var(--glass-line),
+    inset 0 -1px 0.5px var(--glass-underlight);
+}
+
+/* The specular rim. Drawn as a gradient-filled ring: a pseudo-element the size
+   of the panel, filled with the gradient, then masked down to just its 1px
+   border by subtracting its own content box from itself. The mask colour is
+   irrelevant — only its alpha is read — so the black here is not a palette
+   value and does not belong in a custom property. */
+.glass::after,
+.rail .now::after,
+.rail .card::after,
+.rail details.tech::after,
+.rail details.cal::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    145deg,
+    var(--glass-spec) 0%,
+    var(--glass-spec-dim) 30%,
+    var(--glass-spec-dim) 68%,
+    var(--glass-spec) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.scene {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  border-radius: 0;
+  aspect-ratio: auto;
+  min-height: 0;
+  --figure-h: 27%;
+}
+
+
+.rail {
+  position: relative;
+  z-index: 1;
+  width: min(var(--rail-w), 100%);
+  padding: 62px 0 40px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+/* The air/water stripe survives the glass: it is the one edge that carries
+   meaning, so it stays a real coloured border rather than part of the rim. */
+.rail .card:hover { background-color: var(--glass-bg-hi); }
+.rail .now { border-left-width: 4px; }
+.rail .card { border-left-width: 3px; border-radius: 14px; }
+
+/* The supporting cards carry the same type as the featured one. They were a
+   size down, which made them read as footnotes; at matching size the three
+   aircraft read as three aircraft, and the featured card is distinguished by
+   what it carries (route, fact) rather than by shouting. */
+.rail .card .t { font-size: 23px; font-weight: 640; line-height: 1.2; }
+.rail .card .ident { font-size: 12px; }
+.rail .cards { grid-template-columns: 1fr; gap: 8px; }
+.rail h2.sec { margin: 8px 0 2px; }
+
+/* The technical panel holds a wide table, so let it break out of the rail. */
+details.tech[open] { width: min(1100px, calc(100vw - 44px)); }
+
+@media (max-width: 860px) {
+  :root { --rail-w: 360px; }
+}
+
+@media (max-width: 760px) {
+  .scene { --figure-x: 50%; --figure-bottom: 56%; --figure-h: 24%; }
+  .rail {
+    width: 100%;
+    padding: 44vh 14px 32px;
+    gap: 10px;
+  }
+  details.tech[open] { width: 100%; }
+}
+
+
+/*
+ * Text sitting directly on the field takes its colour from the FIELD, not from
+ * the light/dark setting. Those two can disagree — the scene follows the real
+ * sun, so a light theme at ten at night puts dark ink on a dark field and the
+ * header disappears. --field-ink/--field-halo are mirrored onto the root from
+ * the scene's current phase.
+ */
+:root { --halo: rgba(255, 255, 255, 0.6); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --halo: rgba(0, 0, 0, 0.55); }
+}
+:root[data-theme="dark"] { --halo: rgba(0, 0, 0, 0.55); }
+
+/* Slightly more opaque than a pure frost, so body text stays comfortable over
+   a busy green field. */
+:root { --glass-bg: rgba(255, 255, 255, 0.72); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --glass-bg: rgba(22, 27, 25, 0.66); }
+}
+:root[data-theme="dark"] { --glass-bg: rgba(22, 27, 25, 0.66); }
+
+/* The header sits directly on the field too, so it needs the same halo the
+   other loose text gets — a pale grey on bright green is unreadable either way
+   round. */
+
+/* --- the scene palette ----------------------------------------------------
+   Driven by the real position of the sun, not by the light/dark setting, so it
+   is keyed off a data-phase attribute rather than a theme. Every colour the
+   field uses lives here, like every other colour in this file.
+   -------------------------------------------------------------------------- */
+
+.scene[data-phase="day"] {
+  --field-hi: #95c46a; --field-lo: #7fae57;
+  --shade: #1e4a3c; --shade-alpha: 0.62;
+  --scene-ink: rgba(20, 42, 24, 0.62);
+  --scene-halo: rgba(255, 255, 255, 0.55);
+  --figure-filter: none;
+}
+.scene[data-phase="golden"] {
+  --field-hi: #b9cc6d; --field-lo: #93aa55;
+  --shade: #3d4326; --shade-alpha: 0.58;
+  --scene-ink: rgba(38, 40, 18, 0.62);
+  --scene-halo: rgba(255, 255, 255, 0.5);
+  --figure-filter: saturate(1.08) brightness(1.03);
+}
+.scene[data-phase="dusk"] {
+  --field-hi: #61795a; --field-lo: #435a49;
+  --shade: #16221e; --shade-alpha: 0.68;
+  --scene-ink: rgba(228, 238, 224, 0.62);
+  --scene-halo: rgba(0, 0, 0, 0.5);
+  --figure-filter: brightness(0.72) saturate(0.8);
+}
+.scene[data-phase="night"] {
+  --field-hi: #33473d; --field-lo: #1e2c27;
+  --shade: #0d1512; --shade-alpha: 0.82;
+  --scene-ink: rgba(214, 230, 220, 0.55);
+  --scene-halo: rgba(0, 0, 0, 0.6);
+  --figure-filter: brightness(0.62) saturate(0.6);
+  --nav-light: #ffd9a0;
+  --nav-glow: rgba(255, 206, 140, 0.22);
+}
+
+/* --- identity, route, and the fact ---------------------------------------- */
+
+.now .ident {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--ink-3);
+  margin-top: 5px;
+}
+.now .route {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 9px;
+  margin-top: 12px;
+  font-size: 15.5px;
+  font-weight: 560;
+  line-height: 1.35;
+}
+.now .route .arrow { color: var(--ink-3); font-weight: 400; }
+.now .route .code { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 11px; color: var(--ink-3); font-weight: 400; }
+/* Matches the fact body, not the faint tier. This line used to read "No
+   published route", an absence, and being the quietest thing in the card
+   suited it. It now makes a claim about who is flying, which is often more
+   interesting than a scheduled airliner's route, so it reads at body weight. */
+.now .route.unknown { font-size: 13.5px; font-weight: 400; color: var(--ink-2); }
+
+.now .factoid {
+  margin-top: 15px;
+  padding-top: 13px;
+  border-top: 1px solid var(--rule-glass);
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.now .factoid b {
+  display: block;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-weight: 650;
+  color: var(--ink-3);
+  margin-bottom: 4px;
+}
+.now.air .factoid b { color: var(--air); }
+
+.card .ident { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+.card .cardroute { font-size: 12px; color: var(--ink-2); margin-top: 3px; }
+
+/* --- the painted background ------------------------------------------------
+   Measured off dayView.png rather than guessed. The artwork is 6504 x 4204 with
+   a 974 px corner radius, and that corner is a true circle. A percentage
+   border-radius is resolved per axis, so a circular corner on this aspect is
+   14.98% of the width by 23.17% of the height — which is why the two numbers
+   below differ. Lock the aspect and they stay circular at every size.
+
+   The corners are transparent in the source, so what sits behind the artwork is
+   simply the page. That is white.
+   -------------------------------------------------------------------------- */
+
+:root {
+  --art-w: 6504;
+  --art-h: 4204;
+  /* The artwork's own corner is 974 px — 14.98% / 23.17% — on both paintings.
+     Clipping a hair inside that guarantees the flattened corner colour never
+     shows as a fringe, whichever page colour sits behind. */
+  --art-radius-x: 15.15%;
+  --art-radius-y: 23.43%;
+  --art-gap: 18px;
+  --page: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --page: #0d100e; }
+}
+:root[data-theme="dark"] { --page: #0d100e; }
+
+body { background: var(--page); }
+
+/* The largest 6504:4204 rectangle that fits the viewport, centred. Keeping the
+   artwork's own proportions is what keeps its corners circular and its clouds
+   uncropped; the page shows through around it, as in the reference. */
+.scene {
+  position: fixed;
+  /* inset first: it is shorthand for top/right/bottom/left, so putting it after
+     the offsets below would reset them and pin the card to the origin. */
+  inset: auto;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(
+    calc(100vw - 2 * var(--art-gap)),
+    calc((100vh - 2 * var(--art-gap)) * var(--art-w) / var(--art-h))
+  );
+  aspect-ratio: var(--art-w) / var(--art-h);
+  height: auto;
+  min-height: 0;
+  border-radius: var(--art-radius-x) / var(--art-radius-y);
+  overflow: hidden;
+  background: transparent;
+  box-shadow: 0 18px 50px -24px rgba(30, 50, 40, 0.28);
+}
+
+/*
+ * The painting replaces the generated field and its grain.
+ *
+ * Deliberately no image on the base rule. The phase is only known once the sun
+ * has been worked out, and if the day painting were the default the browser
+ * would fetch it on every load and show it for a frame before swapping — a
+ * visible flash of daylight at midnight, and a wasted 387 KB.
+ */
+.painting {
+  background-size: 100% 100%;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.painting::after { content: none; }
+
+.scene[data-phase="day"] .painting,
+.scene[data-phase="golden"] .painting {
+  background-image: url("dayView-bg.jpg");
+}
+
+.scene[data-phase="dusk"] .painting,
+.scene[data-phase="night"] .painting {
+  background-image: url("nightView-bg.jpg");
+}
+
+/*
+ * No filters. There is a real night painting now, so the artwork is shown as
+ * painted — dusk borrows it too, which is closer to the truth than tinting the
+ * daytime one ever was.
+ */
+
+/* The corner radius is now enormous — 15% of the width, ~148 px on a 1000 px
+   card — so anything tucked into a corner is clipped by the curve. Captions sit
+   well inside it. */
+
+@media (max-width: 760px) {
+}
+
+/* --- phones ---------------------------------------------------------------
+   An aspect-locked 1.55:1 card on a tall screen is a 219 px sliver adrift in
+   the middle of the viewport, with the panel sitting on top of it. On a phone
+   the artwork is cropped to a banner across the top instead, and the panel
+   starts below it rather than over it.
+
+   Cropping removes the painting's own circular corners, so there is nothing
+   left to match: a plain radius is the honest choice at this size.
+   -------------------------------------------------------------------------- */
+@media (max-width: 760px) {
+  .scene {
+    inset: auto;
+    top: var(--art-gap);
+    left: 50%;
+    transform: translateX(-50%);
+    width: calc(100vw - 2 * var(--art-gap));
+    aspect-ratio: auto;
+    height: 42vh;
+    border-radius: 26px;
+    --figure-x: 50%;
+    --figure-bottom: 12%;
+    --figure-h: 42%;
+  }
+  .painting { background-size: cover; }
+  .rail { padding-top: calc(var(--art-gap) + 42vh + 18px); }
+}
+
+/* --- keeping the panel on the painting -------------------------------------
+   Locking the aspect means the card letterboxes on a tall viewport, and the
+   glass then straddled the artwork and the white page at once, which looked
+   like an accident. The card's box is computed once here so the panel can be
+   pinned to it instead of to the viewport.
+   -------------------------------------------------------------------------- */
+
+:root {
+  --card-w: min(
+    calc(100vw - 2 * var(--art-gap)),
+    calc((100vh - 2 * var(--art-gap)) * var(--art-w) / var(--art-h))
+  );
+  --card-h: calc(var(--card-w) * var(--art-h) / var(--art-w));
+  --card-left: calc(50vw - var(--card-w) / 2);
+  --card-top: calc(50vh - var(--card-h) / 2);
+}
+
+.scene { width: var(--card-w); }
+
+.rail {
+  margin-left: var(--card-left);
+  padding-top: calc(var(--card-top) + 26px);
+  padding-left: 26px;
+  width: min(var(--rail-w), calc(var(--card-w) - 52px));
+}
+
+@media (max-width: 760px) {
+  /* The phone layout is a banner with the panel below it, so none of this
+     applies — reset it rather than let it leak in. */
+  .rail {
+    margin-left: 0;
+    padding-left: 14px;
+    padding-top: calc(var(--art-gap) + 42vh + 18px);
+    width: 100%;
+  }
+}
+
+/* --- nesting the panel inside the painting ---------------------------------
+   Two rules, both derived, no chosen numbers.
+
+   1. The panel lives inside the painted rectangle. The rail is pinned to the
+      card's box and scrolls within it, so nothing spills onto the page.
+
+   2. Concentric corners. A corner nested inside another is only parallel to it
+      when its radius is the outer radius minus the gap between them:
+
+          inner radius + gap = outer radius
+
+      The outer radius is not a number either — it is the artwork's own corner,
+      974 px on a 6504 px-wide painting, clipped a hair inside at 0.1515 of the
+      width. So every radius on screen traces back to the painting.
+   -------------------------------------------------------------------------- */
+
+:root {
+  /* What .scene actually clips at: 15.15% of the card width. */
+  --art-corner-ratio: 0.1515;
+  --outer-radius: calc(var(--card-w) * var(--art-corner-ratio));
+  --panel-gap: 26px;
+  --inner-radius: max(0px, calc(var(--outer-radius) - var(--panel-gap)));
+}
+
+.rail {
+  position: fixed;
+  left: var(--card-left);
+  top: var(--card-top);
+  width: var(--card-w);
+  height: var(--card-h);
+  margin: 0;
+  padding: var(--panel-gap);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  min-height: 0;
+  box-sizing: border-box;
+  scrollbar-width: thin;
+}
+
+/* Every panel keeps the same column width, the details panel included. It still
+   needs a rule of its own rather than just inheriting `.rail > *`: the base
+   `details.tech[open]` rule that lets it break out to 1100px is more specific
+   than `.rail > *` and would otherwise win. Its table is wider than the column
+   and scrolls sideways inside .tablewrap. */
+.rail > * { width: min(var(--rail-w), 100%); }
+.rail > details.tech[open] { width: min(var(--rail-w), 100%); }
+
+.rail .now,
+.rail .card,
+.rail details.tech,
+.rail details.cal,
+.glass {
+  border-radius: var(--inner-radius);
+}
+
+@media (max-width: 760px) {
+  /* The card is a banner here and the panel sits below it, so there is no
+     nesting to be concentric with. Back to the page flow. */
+  .rail {
+    position: static;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+    padding: calc(var(--art-gap) + 42vh + 18px) 14px 32px;
+  }
+  .rail > *, .rail > details.tech[open] { width: 100%; }
+  .rail .now,
+  .rail .card,
+  .rail details.tech,
+  .rail details.cal { border-radius: 22px; }
+}
+
+/* Content has to clear its own corner, or a large radius eats the first and
+   last lines. The condition is exact: for a corner of radius r, a content box
+   inset by p has its corner at (p,p) and the arc's centre at (r,r); the content
+   corner stays inside the shape while
+
+       sqrt(2) * (r - p) <= r      ->      p >= r * (1 - 1/sqrt(2))
+
+   which is 0.293r. Rounded up slightly for margin, with a floor so small
+   radii still get comfortable padding. */
+:root { --panel-pad: max(18px, calc(var(--inner-radius) * 0.32)); }
+
+.rail .now { padding: var(--panel-pad); }
+.rail .card { padding: calc(var(--panel-pad) * 0.7) var(--panel-pad); }
+.rail details.tech > summary,
+.rail details.cal > summary { padding-inline: var(--panel-pad); }
+
+@media (max-width: 760px) {
+  /* Fixed 22px corners down here, so the derived padding does not apply. */
+  :root { --panel-pad: 16px; }
+  .rail .now { padding: 18px; }
+  .rail .card { padding: 12px 14px; }
+  .rail details.tech > summary,
+  .rail details.cal > summary { padding-inline: 14px; }
+}
+
+/* ===========================================================================
+   Panel geometry — final word, overriding everything above.
+
+   The concentric rule stands: inner radius + gap = outer radius. What changes
+   is which end of it is chosen.
+
+   Deriving the RADIUS from a fixed gap was the mistake. The painting's corner
+   is 0.1515 of the card width — 203 px at 1440x900 — so a 26 px gap forced a
+   177 px card corner, and a panel 39 px tall with a 177 px radius is a pill.
+   That is what made it look unserious.
+
+   So the card radius is the constant and the GAP is derived. 20 px is a
+   conventional card corner; everything else follows from it and from the
+   painting. The panel is then inset equally on all sides, which is what makes
+   the corners genuinely concentric — equal insets put both corner arcs on the
+   same centre. Unequal insets were why the top-left looked wrong.
+   =========================================================================== */
+
+:root {
+  --inner-radius: 20px;
+  --panel-gap: max(24px, calc(var(--outer-radius) - var(--inner-radius)));
+
+  /* One spacing scale, so the rhythm is even instead of 24/32/52. */
+  --stack: 14px;
+  --pad-y: 20px;
+  --pad-x: 22px;
+}
+
+.rail {
+  padding: var(--panel-gap);
+  gap: var(--stack);
+  align-items: flex-start;
+}
+
+.rail .now,
+.rail .card,
+.rail details.tech,
+.rail details.cal,
+.glass { border-radius: var(--inner-radius); }
+
+/* Radius is modest now, so padding no longer has to dodge the corner. */
+.rail .now { padding: var(--pad-y) var(--pad-x); }
+.rail .card { padding: 13px var(--pad-x); }
+.rail details.tech > summary,
+.rail details.cal > summary { padding: 11px var(--pad-x); }
+.rail .cards { gap: var(--stack); }
+.rail h2.sec { margin: calc(var(--stack) / 2) 0 0 2px; }
+
+@media (max-width: 760px) {
+  :root { --panel-gap: 14px; --inner-radius: 18px; }
+  .rail { padding: calc(var(--art-gap) + 42vh + 18px) 14px 32px; gap: var(--stack); }
+  .rail .now,
+  .rail .card,
+  .rail details.tech,
+  .rail details.cal { border-radius: var(--inner-radius); }
+}
+
+/* Old per-element margins were fighting the flex gap: .now carried margin-top
+   14px (which is why the top inset read 197 against a left inset of 183, and
+   why the corners were not concentric), and the two disclosure panels carried
+   20px and 12px, giving a 52/14/35/26 rhythm. The gap is the only spacing
+   authority now. */
+.rail > * { margin: 0; }
+.rail h2.sec { margin: 0 0 0 2px; }
+
+/* ===========================================================================
+   Outer radius derived from the cards — final.
+
+   The relationship is unchanged, but it now runs the other way:
+
+       outer radius = inner radius + gap
+
+   The cards keep a conventional 20 px corner and ordinary padding; the PAINTING
+   bends to fit them, at 44 px. Previously the painting's corner was the fixed
+   term at 203 px, which forced 177 px card corners and turned every panel into
+   a lozenge.
+
+   The artwork carried a 974 px corner of its own, which a 44 px frame would
+   have exposed as a flat arc, so the source is cropped 300 px on every side —
+   past r * (1 - 1/sqrt(2)) = 286 px, the point where a square corner is
+   guaranteed to fall inside the painted area. The corners are paint now, so
+   the frame's shape is entirely the stylesheet's to choose.
+   =========================================================================== */
+
+:root {
+  --art-w: 5904;
+  --art-h: 3604;
+
+  --inner-radius: 20px;
+  --panel-gap: 24px;
+  --outer-radius: calc(var(--inner-radius) + var(--panel-gap));
+}
+
+.scene { border-radius: var(--outer-radius); }
+
+/* `.rail > *` lost to `details.tech` / `details.cal` on specificity, so their
+   20px and 12px top margins survived and the rhythm stayed uneven. Match the
+   element as well as the parent. */
+.rail > details.tech,
+.rail > details.cal,
+.rail > .now,
+.rail > .cards,
+.rail > h2.sec { margin: 0; }
+.rail > h2.sec { margin-left: 2px; }
+
+/* ===========================================================================
+   Even margin on all four sides.
+
+   The card was locked to the artwork's 1.638 aspect and centred, so whichever
+   axis bound it, the other got the slack. On a 16:10 screen that is 18px
+   against 21px and barely shows; on anything taller it letterboxes badly — the
+   800x949 test pane gave 18px at the sides and 241px top and bottom.
+
+   Locking the aspect and holding an even margin are mutually exclusive unless
+   the window happens to match the painting. So the aspect lock goes: the card
+   is inset by the same gap on every side and the painting covers it, cropping
+   to whatever shape the window is. The margin is now equal by construction at
+   any size rather than by coincidence at one.
+   =========================================================================== */
+
+:root {
+  --card-left: var(--art-gap);
+  --card-top: var(--art-gap);
+  --card-w: calc(100vw - 2 * var(--art-gap));
+  --card-h: calc(100vh - 2 * var(--art-gap));
+}
+
+.scene {
+  inset: var(--art-gap);
+  top: var(--art-gap);
+  left: var(--art-gap);
+  width: auto;
+  height: auto;
+  transform: none;
+  aspect-ratio: auto;
+}
+
+.painting { background-size: cover; }
+
+@media (max-width: 760px) {
+  /* Still a banner across the top on a phone; the gap is even there already. */
+  .scene {
+    inset: auto;
+    top: var(--art-gap);
+    left: var(--art-gap);
+    right: var(--art-gap);
+    width: auto;
+    height: 42vh;
+    transform: none;
+  }
+}
+
+/* The figure reads better small: he is a person standing in a field with things
+   passing overhead, not the subject of a portrait. Height is a fraction of the
+   card, so he scales with the window. */
+:root { --figure-scale: 14%; }
+.scene { --figure-h: var(--figure-scale); }
+
+@media (max-width: 760px) {
+  /* The phone card is a much shorter box, so the same apparent size needs a
+     larger fraction of it. Derived from the token rather than written out, or
+     the two drift apart the next time only one of them gets adjusted. */
+  .scene { --figure-h: calc(var(--figure-scale) * 1.5556); }
+}
+
+/* Colour discarded, alpha kept: what lands on the grass is his outline, not a
+   flattened copy of him. */
+.figure-cast { filter: brightness(0) blur(1.1px); }
+
+/* The swept rotor. Same ink as the shadow it sits on, laid over the frozen
+   blades so they read as a disc rather than two sticks. */
+</style>
+</head>
+<body>
+  <div class="scene" id="scene">
+    <div class="painting"></div>
+    <svg class="ground" id="groundSvg" aria-hidden="true"></svg>
+    <img class="figure" id="figureImg" src="favBoy2-sprite.png" alt="" draggable="false">
+    <svg class="shadows" id="shadowSvg" aria-label="Aircraft passing overhead"></svg>
+  </div>
+
+  <div class="rail">
+
+  <section class="now" id="nowCard"></section>
+
+  <h2 class="sec" id="alsoHead" hidden>Also up there</h2>
+  <div class="cards" id="alsoList"></div>
+
+  <details class="tech" id="techPanel">
+    <summary>Show me the numbers</summary>
+    <div class="tech-body">
+      <p class="meta" style="margin:0 0 8px">The calibrated window view: true bearings, range rings on the water and elevation arcs in the sky, drawn as a pinhole projection.</p>
+      <div class="window" id="window">
+        <svg id="view" preserveAspectRatio="none" aria-label="Simulated window view"></svg>
+        <div class="empty" id="emptyNote" hidden></div>
+      </div>
+      <div class="status" id="status"></div>
+      <div class="tablewrap">
+        <table id="contactTable">
+          <thead>
+            <tr>
+              <th>Contact</th>
+              <th>Bearing &amp; elevation</th>
+              <th>Distance</th>
+              <th>Height</th>
+              <th>Moving</th>
+            </tr>
+          </thead>
+          <tbody id="contactBody">
+            <tr><td colspan="5" class="empty-row">Still listening…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </details>
+
+  <details class="cal" id="calPanel">
+    <summary>Tell me about your window</summary>
+    <div class="cal-body">
+
+      <div class="cal-note">
+        Only the facing really matters. Tick the box below if you measured it
+        with a phone compass, which reads about 13&deg; off. To fine-tune, wait
+        for a low aircraft you can see and slide until its shadow lines up.
+      </div>
+
+      <div class="field">
+        <label for="facing">Which way the window faces</label>
+        <div class="row">
+          <input type="number" id="facing" min="0" max="359.9" step="0.5">
+          <span class="hint" id="facingCardinal"></span>
+        </div>
+        <input type="range" id="facingRange" min="0" max="359.5" step="0.5">
+        <label class="check">
+          <input type="checkbox" id="magnetic">
+          <span>I pointed a phone compass out of the window. Correct it by
+            <span id="declValue">13.0</span>&deg;.</span>
+        </label>
+        <span class="hint" id="facingTrue"></span>
+      </div>
+
+      <div class="field">
+        <label for="fov">How wide the view is</label>
+        <input type="number" id="fov" min="20" max="150" step="1">
+        <input type="range" id="fovRange" min="20" max="150" step="1">
+        <span class="hint">Slide right to take in more sky, left to zoom in.</span>
+      </div>
+
+      <div class="field">
+        <label for="radius">How far out to look (km)</label>
+        <input type="number" id="radius" min="1" max="40" step="0.5">
+        <input type="range" id="radiusRange" min="1" max="40" step="0.5">
+        <span class="hint" id="radiusHint"></span>
+      </div>
+
+      <div class="field origin">
+        <label>Where this window is</label>
+        <span class="hint" id="whereHint"></span>
+        <span class="hint" id="serverOrigin"></span>
+      </div>
+
+
+      <div class="field">
+        <label>&nbsp;</label>
+        <div class="row">
+          <button class="ghost" type="button" id="resetCal">Start over</button>
+        </div>
+        <span class="hint">Saved in this browser, nowhere else.</span>
+      </div>
+
+    </div>
+  </details>
+
+</div>
+
+<script>
+'use strict';
+
+/* ===========================================================================
+   Geometry
+   ---------------------------------------------------------------------------
+   This is the part of the app that actually matters. The panel is not a map;
+   it is a simulated window. So the projection is a real pinhole camera with a
+   single focal length, not a linear bearing-to-x mapping. A linear mapping
+   compresses the centre and stretches the edges relative to what your eye
+   actually sees through a window frame, which defeats the whole point of
+   answering "where do I look".
+   =========================================================================== */
+
+const R_EARTH = 6371008.8;              // mean radius, metres
+
+/* Effective radius under standard refraction (k ≈ 0.13). Light bends slightly
+   downward in the atmosphere, so the visible horizon is further away than the
+   geometric one, and distant contacts sit slightly higher than raw geometry
+   predicts. Using an inflated radius is the standard way to fold that in. */
+const R_EFF = R_EARTH / (1 - 0.13);
+
+const KT_TO_MS = 0.514444;
+const FPM_TO_MS = 0.00508;
+const M_TO_FT = 3.280839895;
+const M_TO_NM = 1 / 1852;
+
+const rad = (d) => (d * Math.PI) / 180;
+const deg = (r) => (r * 180) / Math.PI;
+
+/** Wrap to [-180, 180). Needed everywhere a difference of bearings is taken. */
+function wrap180(d) {
+  return ((((d + 180) % 360) + 360) % 360) - 180;
+}
+
+/** Great-circle distance in metres. */
+function distanceM(lat1, lon1, lat2, lon2) {
+  const p1 = rad(lat1);
+  const p2 = rad(lat2);
+  const dp = rad(lat2 - lat1);
+  const dl = rad(lon2 - lon1);
+  const a = Math.sin(dp / 2) ** 2 + Math.cos(p1) * Math.cos(p2) * Math.sin(dl / 2) ** 2;
+  return 2 * R_EARTH * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+/**
+ * Initial great-circle bearing, degrees true.
+ *
+ * Not atan2(dLon, dLat). At 40.7 degrees north a degree of longitude is only
+ * 0.76 of a degree of latitude, so the flat version is wrong by tens of
+ * degrees on some headings — enough to put a ship out of the window entirely.
+ */
+function bearingDeg(lat1, lon1, lat2, lon2) {
+  const p1 = rad(lat1);
+  const p2 = rad(lat2);
+  const dl = rad(lon2 - lon1);
+  const y = Math.sin(dl) * Math.cos(p2);
+  const x = Math.cos(p1) * Math.sin(p2) - Math.sin(p1) * Math.cos(p2) * Math.cos(dl);
+  return (deg(Math.atan2(y, x)) + 360) % 360;
+}
+
+/**
+ * Elevation angle in degrees, positive up.
+ *
+ * Both altitudes must be above the SAME datum — mean sea level. The observer's
+ * eye height is stored as height above sea level for exactly this reason; if
+ * you mix "metres above the street" with "feet above sea level" the whole
+ * vertical axis is quietly offset.
+ */
+function elevationDeg(groundDistM, targetAltM, eyeAltM) {
+  if (groundDistM < 1) return targetAltM > eyeAltM ? 90 : -90;
+  const dh = targetAltM - eyeAltM;
+  const curvatureDrop = (groundDistM * groundDistM) / (2 * R_EFF);
+  return deg(Math.atan2(dh - curvatureDrop, groundDistM));
+}
+
+/** Angle by which the visible horizon sits below eye level, degrees. */
+function horizonDipDeg(eyeAltM) {
+  if (eyeAltM <= 0) return 0;
+  return deg(Math.sqrt((2 * eyeAltM) / R_EFF));
+}
+
+/** Distance to the visible horizon, metres. Beyond this, sea level is hidden. */
+function horizonDistanceM(eyeAltM) {
+  if (eyeAltM <= 0) return 0;
+  return Math.sqrt(2 * R_EFF * eyeAltM);
+}
+
+/**
+ * Project a direction (true bearing + elevation) into pane pixels.
+ *
+ * Pinhole camera: yaw to the window facing, pitch, then divide by depth. One
+ * focal length for both axes so that pixels stay square and the vertical field
+ * of view falls out of the pane's aspect ratio rather than being invented.
+ *
+ * Returns null when the target is behind the window plane.
+ */
+function project(bearingTrue, elevation, view, W, H) {
+  const relAz = rad(wrap180(bearingTrue - view.facingDeg));
+  const el = rad(elevation);
+  const p = rad(view.pitchDeg);
+
+  // Yaw-only camera frame: x right, y up, z forward.
+  const x = Math.cos(el) * Math.sin(relAz);
+  const yYaw = Math.sin(el);
+  const zYaw = Math.cos(el) * Math.cos(relAz);
+
+  // Then rotate about the x axis by the pitch.
+  const z = zYaw * Math.cos(p) + yYaw * Math.sin(p);
+  const y = -zYaw * Math.sin(p) + yYaw * Math.cos(p);
+
+  if (z <= 1e-3) return null; // at or behind the window plane
+
+  const focal = (W / 2) / Math.tan(rad(view.fovXDeg) / 2);
+  return {
+    px: W / 2 + (x / z) * focal,
+    py: H / 2 - (y / z) * focal,
+    focal,
+    depth: z,
+  };
+}
+
+/**
+ * Apparent size in pixels of an object `sizeM` across at `distM`.
+ * Small-angle form of 2·focal·tan(θ/2); exact enough far below one radian.
+ */
+function apparentPx(sizeM, distM, focal) {
+  if (!(distM > 0)) return 0;
+  return (focal * sizeM) / distM;
+}
+
+/**
+ * Which way the marker should point, in screen degrees.
+ *
+ * Found by projecting where the contact will be a few seconds from now and
+ * taking the screen-space difference — not by rotating the true course into
+ * the frame. Those are different things. An aircraft flying directly away from
+ * the window has a course equal to the window facing, but on screen it crawls
+ * toward the vanishing point rather than pointing "up". Perspective has to be
+ * applied to the velocity as well as to the position.
+ */
+function screenHeading(s, p, W, H) {
+  const dir = Number.isFinite(s.courseDeg) ? s.courseDeg : s.headingDeg;
+  if (!Number.isFinite(dir)) return null;
+
+  const LOOKAHEAD_S = 12;
+  // A stationary contact still has an orientation worth drawing, so fall back
+  // to a nominal speed purely to get a direction out of the projection.
+  const speed = Number.isFinite(s.speedKt) && s.speedKt > 0.3 ? s.speedKt : 6;
+  const d = speed * KT_TO_MS * LOOKAHEAD_S;
+  const b = rad(dir);
+  const lat2 = s.lat + (d * Math.cos(b)) / 111320;
+  const lon2 = s.lon + (d * Math.sin(b)) / (111320 * Math.cos(rad(s.lat)));
+  const alt2 = Number.isFinite(s.verticalRateFpm)
+    ? Math.max(0, s.altM + s.verticalRateFpm * FPM_TO_MS * LOOKAHEAD_S)
+    : s.altM;
+
+  const gd = distanceM(view.lat, view.lon, lat2, lon2);
+  const q = project(bearingDeg(view.lat, view.lon, lat2, lon2), elevationDeg(gd, alt2, view.eyeAltM), view, W, H);
+  if (!q) return null;
+
+  const dx = q.px - p.px;
+  const dy = q.py - p.py;
+  // Too near the vanishing point for the direction to mean anything on screen.
+  if (Math.hypot(dx, dy) < 0.4) return null;
+  return deg(Math.atan2(dy, dx));
+}
+
+/** Advance a contact along its reported course and vertical rate. */
+function deadReckon(c, dtS) {
+  const out = { lat: c.lat, lon: c.lon, altM: c.altM, estimated: false };
+  if (dtS <= 0.5) return out;
+  const capped = Math.min(dtS, 20); // never extrapolate far enough to lie
+
+  if (Number.isFinite(c.speedKt) && Number.isFinite(c.courseDeg) && c.speedKt > 0.3) {
+    const d = c.speedKt * KT_TO_MS * capped;
+    const b = rad(c.courseDeg);
+    out.lat = c.lat + (d * Math.cos(b)) / 111320;
+    out.lon = c.lon + (d * Math.sin(b)) / (111320 * Math.cos(rad(c.lat)));
+    out.estimated = true;
+  }
+  if (Number.isFinite(out.altM) && Number.isFinite(c.verticalRateFpm) && c.verticalRateFpm !== 0) {
+    out.altM = Math.max(0, out.altM + c.verticalRateFpm * FPM_TO_MS * capped);
+    out.estimated = true;
+  }
+  return out;
+}
+
+const CARDINALS = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+const cardinal = (d) => CARDINALS[Math.round((((d % 360) + 360) % 360) / 22.5) % 16];
+
+/**
+ * Where a contact will be `seconds` from now, as seen from the window.
+ *
+ * Used to say things in ordinary words — which way it is crossing, and roughly
+ * how long before it leaves the window — rather than quoting a course and a
+ * speed in knots and leaving the reader to do the work.
+ */
+function futureState(s, seconds) {
+  const dir = Number.isFinite(s.courseDeg) ? s.courseDeg : s.headingDeg;
+  let lat = s.lat;
+  let lon = s.lon;
+  let altM = s.altM;
+
+  if (Number.isFinite(dir) && Number.isFinite(s.speedKt) && s.speedKt > 0.3) {
+    const d = s.speedKt * KT_TO_MS * seconds;
+    const b = rad(dir);
+    lat = s.lat + (d * Math.cos(b)) / 111320;
+    lon = s.lon + (d * Math.sin(b)) / (111320 * Math.cos(rad(s.lat)));
+  }
+  if (Number.isFinite(altM) && Number.isFinite(s.verticalRateFpm)) {
+    altM = Math.max(0, altM + s.verticalRateFpm * FPM_TO_MS * seconds);
+  }
+
+  const groundDist = distanceM(view.lat, view.lon, lat, lon);
+  const bearing = bearingDeg(view.lat, view.lon, lat, lon);
+  return { lat, lon, altM, groundDist, bearing, relBearing: wrap180(bearing - view.facingDeg) };
+}
+
+/* ===========================================================================
+   Plain language
+   ---------------------------------------------------------------------------
+   Everything below turns the geometry into the sort of sentence you would say
+   to someone standing next to you at the window. No bearings, no knots, no
+   feet, no nautical miles. The numbers all still exist — they live in the
+   folded-away detail panel for anyone who wants them.
+   =========================================================================== */
+
+/** AIS names arrive shouting. "CIRCLE LINE XV" should not become "Circle Line Xv". */
+function titleCase(s) {
+  return String(s)
+    .toLowerCase()
+    .split(/\s+/)
+    .map((w) => (w.length <= 4 && /^[ivxlc]+$/.test(w) ? w.toUpperCase() : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(' ');
+}
+
+/** "An American jet", but "a United jet" — the U in these names is a Y sound. */
+const article = (w) => (/^u/i.test(w) ? 'A' : /^[aeio]/i.test(w) ? 'An' : 'A');
+
+const VESSEL_WORDS = {
+  passenger: 'passenger boat',
+  cargo: 'cargo ship',
+  tanker: 'tanker',
+  tug: 'tugboat',
+  fishing: 'fishing boat',
+  pleasure: 'private boat',
+  sailing: 'sailboat',
+  pilot: 'pilot boat',
+  sar: 'rescue boat',
+  law: 'police boat',
+  military: 'navy ship',
+  work: 'work boat',
+  fast: 'fast ferry',
+  special: 'boat',
+  other: 'boat',
+  unknown: 'boat',
+};
+
+function vesselWords(s, short) {
+  const code = s.extra && s.extra.typeCode;
+  // 31 and 32 are "towing", which on this river means a tug and a barge.
+  if (!short && (code === 31 || code === 32)) return 'tugboat pushing a barge';
+  return VESSEL_WORDS[s.klass] || 'boat';
+}
+
+/** Decided on the server, where the type tables live. */
+const aircraftWords = (s) => s.plainKind || 'plane';
+
+/*
+ * Routes are fetched one aircraft at a time, for whichever one the card is
+ * currently naming, and cached here for the life of the page. ADS-B carries no
+ * route, so this is a third-party lookup and worth being frugal with.
+ */
+const routeCache = new Map();
+
+function ensureRoute(callsign) {
+  if (!callsign || routeCache.has(callsign)) return;
+  routeCache.set(callsign, 'pending');
+  fetch('/api/route?callsign=' + encodeURIComponent(callsign), { cache: 'no-store' })
+    .then((r) => r.json())
+    .then((d) => { routeCache.set(callsign, d.route || null); renderPanels(); })
+    .catch(() => { routeCache.set(callsign, null); });
+}
+
+/** The model, as a headline: "Boeing 737 MAX 8", not "a passenger jet". */
+function headline(s) {
+  if (s.kind === 'water') {
+    const w = vesselWords(s, false);
+    return s.properName ? `${titleCase(s.properName)}, a ${w}` : `${article(w)} ${w}`;
+  }
+  return s.typeName || capitalise(aircraftWords(s));
+}
+
+/** Registration, flight number and ICAO type — the technical line. */
+function identLine(s) {
+  if (s.kind === 'water') {
+    const e = s.extra || {};
+    return [e.callSign, e.mmsi ? 'MMSI ' + e.mmsi : null].filter(Boolean).join('  \u00b7  ');
+  }
+  const e = s.extra || {};
+  const bits = [];
+  const m = /^([A-Z]{3})(\d.*)$/.exec(s.label || '');
+  if (s.operator && m) bits.push(`${s.operator} ${m[2]}`);
+  else if (s.label) bits.push(s.label);
+  if (e.registration && e.registration !== s.label) bits.push(e.registration);
+  if (e.type) bits.push(e.type);
+  return bits.join('  \u00b7  ');
+}
+
+/** Where the flight came from and where it is going, once we know. */
+function routeHtml(s, cls) {
+  if (s.kind !== 'air') return '';
+  const r = routeCache.get(s.label);
+  if (r === undefined || r === 'pending') return '';
+  if (!r) {
+    return cls === 'card' ? '' :
+      '<div class="route unknown">No filed route, which usually means someone flying for themselves rather than to a schedule.</div>';
+  }
+  const leg = (place, code) =>
+    `${escapeHtml(place || code || '?')}${code ? ` <span class="code">${escapeHtml(code)}</span>` : ''}`;
+  if (cls === 'card') {
+    return `<div class="cardroute">${escapeHtml(r.from || r.fromCode || '?')} \u2192 ${escapeHtml(r.to || r.toCode || '?')}</div>`;
+  }
+  return `<div class="route">${leg(r.from, r.fromCode)} <span class="arrow">\u2192</span> ${leg(r.to, r.toCode)}</div>`;
+}
+
+/** A couple of words, for the label on the window itself. */
+function shortName(s) {
+  if (s.kind === 'water') {
+    const w = vesselWords(s, true);
+    return s.properName ? titleCase(s.properName) : w.charAt(0).toUpperCase() + w.slice(1);
+  }
+  const n = s.typeName;
+  if (!n) return capitalise(aircraftWords(s));
+  if (n.length <= 15) return n;
+  // Drop the manufacturer when what is left still identifies it: "Bombardier
+  // CRJ900" is too wide for a label on a shadow, "CRJ900" is not.
+  const rest = n.split(' ').slice(1).join(' ');
+  return rest.length >= 4 ? rest : n;
+}
+
+/*
+ * There was a pair of functions here that turned relative bearing and elevation
+ * into "over to your left, a little way up the sky". They are gone.
+ *
+ * If a plane is overhead you look up and see it — you do not need to be told
+ * which way to face, and nobody was going to search the floor for it. The
+ * directions would only earn their place over data you cannot simply look up
+ * and check, such as an archive of past traffic. The angular figures still
+ * exist, as figures, in the details panel.
+ */
+
+/**
+ * How big it looks. Angular size is the honest answer to "will I be able to
+ * see it", and it converts into everyday words cleanly — the full moon is
+ * about half a degree across, for reference.
+ */
+function apparentDeg(s) {
+  return deg(2 * Math.atan(s.sizeM / (2 * Math.max(50, s.groundDist))));
+}
+
+
+/* ===========================================================================
+   Settings
+   =========================================================================== */
+
+/* Magnetic declination at Jersey City, degrees west. True = magnetic - this. */
+const DECLINATION_W = 13.0;
+
+const DEFAULTS = {
+  facingDeg: 90,      // true bearing, due east across the Hudson
+  /* 85 degrees is about as wide as a flat rectilinear rendering stays natural.
+     Push it past ~110 and the edges stretch the way a wide-angle photograph
+     does — still geometrically correct, but no longer what the eye reports. */
+  fovXDeg: 85,
+  pitchDeg: 7,        // looking slightly up, so the sky gets most of the pane
+  eyeAltM: 40,
+  lat: 40.7267,
+  lon: -74.0345,
+  magneticInput: false,
+  // Aircraft only for now. The AIS half of the server keeps running; this is a
+  // display filter, so turning boats back on is a checkbox rather than an edit.
+  showWater: false,
+  /*
+   * How far out the display reaches, in kilometres. Anything beyond this is not
+   * named, listed, counted or drawn — it is treated as scenery, not as
+   * something you are being asked to look at. This is a harder cut than the
+   * apparent-size bar and sits in front of it.
+   */
+  viewRadiusKm: 5,
+};
+
+const STORE_KEY = 'hudson-window.view.v1';
+
+function loadSettings() {
+  let saved = {};
+  try {
+    saved = JSON.parse(localStorage.getItem(STORE_KEY) || '{}') || {};
+  } catch {
+    saved = {};
+  }
+  return { ...DEFAULTS, ...saved };
+}
+
+function saveSettings(v) {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify(v));
+  } catch {
+    /* private window, or storage disabled. The app works fine without it. */
+  }
+}
+
+const view = loadSettings();
+
+/* ===========================================================================
+   State
+   =========================================================================== */
+
+let allContacts = [];
+let contacts = [];
+/*
+ * How old the aircraft positions already were when the response arrived.
+ *
+ * The server's aircraft cache is deliberately 4 s and the browser polls every
+ * 3 s, so a response regularly carries a position that has not moved since the
+ * last one. Anchoring dead reckoning to the arrival time treats that stale
+ * position as current and throws away the motion already drawn, which shows up
+ * as the marker snapping backwards once per poll. Vessels are read live out of
+ * the in-memory table, so they carry no transport age.
+ */
+let dataAgeS = 0;
+let groundedCount = 0;
+let fetchedAt = 0;
+let sources = null;
+let serverObserver = null;
+let selectedId = null;
+let featuredId = null;
+let lastError = null;
+
+const capitalise = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+const $ = (id) => document.getElementById(id);
+const svg = $('view');
+const SVGNS = 'http://www.w3.org/2000/svg';
+
+/* ===========================================================================
+   Data
+   =========================================================================== */
+
+async function poll() {
+  try {
+    const res = await fetch('/api/contacts', { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+
+    allContacts = data.contacts || [];
+    dataAgeS = (data.sources && data.sources.air && data.sources.air.ageS) || 0;
+    applyFilters();
+
+    sources = data.sources || null;
+    serverObserver = data.observer || null;
+    fetchedAt = performance.now();
+    lastError = null;
+  } catch (err) {
+    lastError = err.message;
+  }
+  renderPanels();
+}
+
+/**
+ * Everything the rest of the app is allowed to see.
+ *
+ * Two filters, for quite different reasons:
+ *
+ * Grounded aircraft — within 30 nm there are four major airports, and on a
+ * normal afternoon more than half of what the feed returns is parked or taxiing
+ * at one of them. None of it is visible from a window in Newport, and a
+ * grounded aircraft reports no usable altitude, so it would all be drawn
+ * sitting on the water at the horizon.
+ *
+ * Boats — hidden by choice, not because anything is wrong. The server keeps its
+ * AIS socket open and the vessel table keeps merging, so the switch in the
+ * setup panel brings them straight back with no reload.
+ */
+function applyFilters() {
+  groundedCount = allContacts.filter((c) => c.kind === 'air' && c.onGround).length;
+  contacts = allContacts.filter((c) => !c.onGround && (view.showWater || c.kind !== 'water'));
+}
+
+function currentSolved() {
+  const since = fetchedAt ? (performance.now() - fetchedAt) / 1000 : 0;
+  return contacts.map((c) => solve(c, (c.kind === 'air' ? dataAgeS : 0) + since));
+}
+
+/*
+ * The window frame, as a fixed 16:7 shape rather than whatever element happens
+ * to be on screen. The instrument pane now lives inside a collapsed panel and
+ * measures zero when shut, which would quietly change the vertical field of
+ * view and therefore which aircraft count as visible.
+ */
+const FRAME_W = 1000;
+const FRAME_H = 437;
+function paneSize() {
+  return { W: FRAME_W, H: FRAME_H };
+}
+
+/**
+ * Actually framed by the window — both axes, not just left and right.
+ *
+ * Tested against the real projection rather than an angle, because a window has
+ * a top and a bottom. An aircraft passing almost overhead at 3 km is close and
+ * enormous and completely invisible from a chair by the glass, and telling
+ * someone to look at it is worse than saying nothing.
+ */
+function inWindow(s) {
+  if (s.belowHorizon || s.altUnknown) return false;
+  const { W, H } = paneSize();
+  const p = project(s.bearing, s.elev, view, W, H);
+  return !!p && p.px >= 0 && p.px <= W && p.py >= 0 && p.py <= H;
+}
+
+/**
+ * Big enough to actually find in the sky.
+ *
+ * The bar is set against eyesight, not against tidiness. The eye resolves about
+ * one arcminute, 0.017°, so this is roughly five times the limit — an airliner
+ * inside 25 km, a helicopter inside 10. Those really are visible: a jet on
+ * approach at 12 km is a third the width of the full moon and perfectly plain
+ * against clear sky.
+ *
+ * Clutter is handled by ranking and capping the list instead, which is the
+ * honest way round. Anything under the bar stays drawn in the window — the sky
+ * does look like that — but is not named, listed or counted.
+ */
+const WORTH_A_LOOK_DEG = 0.08;
+const worthLooking = (s) => apparentDeg(s) >= WORTH_A_LOOK_DEG;
+
+/** Close enough to be the subject rather than the backdrop. */
+const withinRadius = (s) => s.groundDist <= view.viewRadiusKm * 1000;
+
+/**
+ * Everything the display is willing to name: inside the window frame, inside
+ * the radius, and big enough to find. Within a few kilometres the size bar is
+ * almost always satisfied anyway, so in practice the radius is what decides.
+ */
+const onScreen = (s) => inWindow(s) && withinRadius(s) && worthLooking(s);
+
+function renderPanels() {
+  const solved = currentSolved();
+  const featured = renderNow(solved);
+  renderAlso(solved, featured);
+  // The field shows the same aircraft the cards describe, most prominent first.
+  sceneIds = [featured, ...(renderAlso.shown || [])].filter(Boolean).slice(0, MAX_SHADOWS).map((s) => s.id);
+  renderStatus();
+  renderTable(solved);
+}
+
+/* ===========================================================================
+   Derived per-contact geometry
+   =========================================================================== */
+
+function solve(c, dtS) {
+  const dr = deadReckon(c, dtS);
+  const groundDist = distanceM(view.lat, view.lon, dr.lat, dr.lon);
+  const bearing = bearingDeg(view.lat, view.lon, dr.lat, dr.lon);
+  const relBearing = wrap180(bearing - view.facingDeg);
+
+  // A vessel is at sea level, so altM of 0 is correct rather than missing. An
+  // aircraft with no usable altitude at all is a different thing: it must not
+  // be quietly placed at zero, or it gets drawn floating on the water.
+  const altUnknown = c.kind === 'air' && !Number.isFinite(dr.altM);
+  // Geometric altitude reads slightly negative near touchdown, and sometimes
+  // just reads wrong. Nothing is below sea level, so clamp rather than draw an
+  // aircraft under the waterline.
+  const altM = Number.isFinite(dr.altM) ? Math.max(0, dr.altM) : 0;
+  const elev = elevationDeg(groundDist, altM, view.eyeAltM);
+
+  // Sea-level contacts beyond the visible horizon are hidden by the Earth's
+  // own bulge. They stay in the list, greyed, but must not be drawn in the pane.
+  const horizon = horizonDistanceM(view.eyeAltM);
+  const belowHorizon = altM < 5 && groundDist > horizon;
+
+  return {
+    ...c,
+    lat: dr.lat,
+    lon: dr.lon,
+    altM,
+    altUnknown,
+    estimated: dr.estimated,
+    groundDist,
+    bearing,
+    relBearing,
+    elev,
+    belowHorizon,
+  };
+}
+
+/* ===========================================================================
+   The field
+   ---------------------------------------------------------------------------
+   The illustrated view. It is a ground plane seen obliquely, and it carries the
+   same solved geometry as everything else:
+
+     x     = where the aircraft sits left-to-right across your field of view
+     y     = how far away it is, on a log scale, near at the bottom
+     size  = that same distance, times the aircraft's real size
+
+   So a shadow enters from the side the aircraft really is on, crosses in the
+   direction it is really travelling, and is big when it is close. It is not a
+   map — the question is still "where do I look" — but nothing about it is
+   invented.
+   =========================================================================== */
+
+/**
+ * Position of the sun, degrees. Azimuth is measured from true north, clockwise.
+ *
+ * Low-precision NOAA method: good to a fraction of a degree, which is far more
+ * than a picture of a shadow needs. Verified against the solstices at this
+ * latitude — 72.7° and 25.8° at local noon, which is exactly 90 − 40.73 ± 23.44.
+ */
+function solarPosition(date, lat, lon) {
+  const n = date.getTime() / 86400000 + 2440587.5 - 2451545.0;  // days from J2000
+  const L = (280.460 + 0.9856474 * n) % 360;                    // mean longitude
+  const g = ((357.528 + 0.9856003 * n) % 360) * (Math.PI / 180);
+  const lam = (L + 1.915 * Math.sin(g) + 0.020 * Math.sin(2 * g)) * (Math.PI / 180);
+  const eps = (23.439 - 0.0000004 * n) * (Math.PI / 180);
+  const ra = Math.atan2(Math.cos(eps) * Math.sin(lam), Math.cos(lam));
+  const dec = Math.asin(Math.sin(eps) * Math.sin(lam));
+  const gmst = (18.697374558 + 24.06570982441908 * n) % 24;
+  const H = ((gmst * 15 + lon) % 360) * (Math.PI / 180) - ra;   // hour angle
+  const phi = rad(lat);
+  const el = Math.asin(Math.sin(phi) * Math.sin(dec) + Math.cos(phi) * Math.cos(dec) * Math.cos(H));
+  const az = Math.atan2(-Math.sin(H), Math.tan(dec) * Math.cos(phi) - Math.sin(phi) * Math.cos(H));
+  return { elevationDeg: deg(el), azimuthDeg: norm360(deg(az)) };
+}
+
+/*
+ * Which of the four looks the field wears. The colours themselves are CSS
+ * custom properties on .scene[data-phase], not literals in here.
+ */
+function sunPhase(elevationDeg) {
+  return elevationDeg > 8 ? 'day' : elevationDeg > 0 ? 'golden' : elevationDeg > -6 ? 'dusk' : 'night';
+}
+
+/* Read back once per phase change rather than once per frame. */
+let scenePaint = null;
+
+
+/*
+ * Pinned to the day painting while the day view is being worked on.
+ *
+ * Set to null to hand the phase back to the sun; nothing else needs touching,
+ * and the night painting and its palette are untouched behind this.
+ */
+const FORCE_PHASE = 'day';
+
+function sunState() {
+  const now = new Date();
+  let s = solarPosition(now, view.lat, view.lon);
+
+  /*
+   * Holding the phase at 'day' is not enough on its own. The sun's real azimuth
+   * and elevation also set which way shadows fall and how long they are, so at
+   * half past nine at night you would get a daylight painting lit by midnight
+   * geometry — shadows stretched to the clamp, pointing somewhere impossible.
+   * Substitute this same date's mid-afternoon sun: a real position for this
+   * place, just not this minute.
+   */
+  if (FORCE_PHASE === 'day' && s.elevationDeg <= 2) {
+    const afternoon = new Date(now);
+    afternoon.setHours(15, 0, 0, 0);
+    s = solarPosition(afternoon, view.lat, view.lon);
+  }
+
+  return { ...s, phase: FORCE_PHASE || sunPhase(s.elevationDeg) };
+}
+
+/**
+ * A true azimuth, as a direction on screen.
+ *
+ * The top of the field is the way you are facing, so an azimuth equal to the
+ * window facing points straight up the screen.
+ */
+function azimuthToScreen(azDeg) {
+  const r = rad(wrap180(azDeg - view.facingDeg));
+  return { dx: Math.sin(r), dy: -Math.cos(r) };
+}
+
+/*
+ * Distance band the field spans, metres. The far end follows the view radius,
+ * so the ground always uses its full depth for the range actually on show
+ * rather than squeezing everything into the bottom of the frame.
+ */
+const SCENE_NEAR_M = 300;
+const sceneFarM = () => Math.max(1200, view.viewRadiusKm * 1000);
+const SCENE_NEAR_Y = 0.80;   // fraction of height for the nearest
+const SCENE_FAR_Y = 0.12;    // and for the most distant
+
+function sceneProject(s, W, H, inset) {
+  const half = view.fovXDeg / 2;
+  const left = inset || 0;
+  const sx = left + (0.5 + s.relBearing / (2 * half)) * (W - left);
+  // Log distance, so the 3–25 km band where the traffic actually is spreads
+  // across the field instead of piling up against the horizon.
+  const t = Math.max(0, Math.min(1,
+    Math.log(Math.max(SCENE_NEAR_M, s.groundDist) / SCENE_NEAR_M) / Math.log(sceneFarM() / SCENE_NEAR_M)));
+  const sy = H * (SCENE_NEAR_Y - (SCENE_NEAR_Y - SCENE_FAR_Y) * t);
+  const scale = (1 - 0.8 * t) * (s.sizeM / 35);
+  return { sx, sy, scale, t };
+}
+
+/*
+ * Painted shadows, in place of the drawn silhouettes.
+ *
+ * Each PNG is pre-rotated, so pointing one along a flight path means correcting
+ * for the heading it was painted at. Measured from the alpha channel's principal
+ * axis rather than guessed: the jet's fuselage runs 13 degrees above horizontal
+ * with the nose to the right, the helicopter's 27.5 degrees below it. Screen
+ * angles, so positive is clockwise, matching what screenHeading returns.
+ */
+const SHADOW_ART = {
+  plane: { href: 'airplaneShadow.png', intrinsicDeg: -13.0, spanFraction: 0.83 },
+  heli: { href: 'helicopterShadow.png', intrinsicDeg: 27.5, spanFraction: 0.90 },
+};
+
+/**
+ * One shadow, placed and turned.
+ *
+ * `spanFraction` is how much of the PNG's width the painted shape actually
+ * occupies — 83% and 90%, measured from the alpha bounding box — so the image is
+ * scaled up by its reciprocal to make the aircraft itself the requested span
+ * rather than the file it sits in.
+ */
+function shadowImage(art, spanPx, headingDeg) {
+  const img = document.createElementNS(SVGNS, 'image');
+  const w = spanPx / art.spanFraction;
+  const h = w * (1086 / 1448);
+  img.setAttributeNS('http://www.w3.org/1999/xlink', 'href', art.href);
+  img.setAttribute('href', art.href);
+  img.setAttribute('x', String(-w / 2));
+  img.setAttribute('y', String(-h / 2));
+  img.setAttribute('width', String(w));
+  img.setAttribute('height', String(h));
+  /*
+   * Mirror rather than rotate past vertical.
+   *
+   * These are not flat plan views — the helicopter's landing skids hang below
+   * its cabin, so the art has a definite "down" side. Rotating it more than 90°
+   * put the skids on top and the machine read as upside down.
+   *
+   * So past 90° the silhouette is mirrored across its own nose-tail axis
+   * instead. Composing rotate(heading) scale(1,-1) rotate(-intrinsic) leaves a
+   * point on the nose axis where it was — it is on the mirror line — while
+   * everything either side of it swaps, which puts the skids back underneath.
+   * An aircraft is near enough symmetric for the mirrored silhouette to be
+   * indistinguishable from the real one.
+   */
+  const r = wrap180(headingDeg - art.intrinsicDeg);
+  const spin = Math.abs(r) > 90
+    ? `rotate(${headingDeg.toFixed(1)}) scale(1 -1) rotate(${(-art.intrinsicDeg).toFixed(1)})`
+    : `rotate(${r.toFixed(1)})`;
+
+  const g = document.createElementNS(SVGNS, 'g');
+  g.setAttribute('transform', spin);
+  g.appendChild(img);
+  return g;
+}
+
+let sceneIds = [];   // which contacts the field is showing, chosen in renderPanels
+const MAX_SHADOWS = 3;
+
+function renderScene() {
+  const scene = $('scene');
+  const rect = scene.getBoundingClientRect();
+  const W = Math.max(280, Math.round(rect.width));
+  const H = Math.max(220, Math.round(rect.height));
+
+  // How much of the left edge the glass rail is covering.
+  const rail = document.querySelector('.rail');
+  const inset = rail && window.innerWidth > 760 ? Math.min(W * 0.55, rail.getBoundingClientRect().width + 8) : 0;
+
+  const sun = sunState();
+  if (scene.dataset.phase !== sun.phase) {
+    scene.dataset.phase = sun.phase;
+    scenePaint = null;                     // colours changed, re-read them
+  }
+  if (!scenePaint) {
+    // Anything drawn ON the field has to be legible against the field, whatever
+    // the light/dark setting says. Mirror the scene's own ink onto the root.
+    const sc = getComputedStyle(scene);
+    document.documentElement.style.setProperty('--field-ink', sc.getPropertyValue('--scene-ink').trim());
+    document.documentElement.style.setProperty('--field-halo', sc.getPropertyValue('--scene-halo').trim());
+
+    /*
+     * The panels follow the PAINTING, not the operating system.
+     *
+     * They are glass, so what sits behind them is the field — and the two used
+     * to be able to disagree completely. A dark system theme over a daylit
+     * painting gave near-black input boxes and pale labels floating on bright
+     * green: the form was genuinely unreadable. Tying the theme to the phase
+     * means the glass, the text on it and the controls inside it are always
+     * resolved against the thing actually behind them.
+     */
+    document.documentElement.dataset.theme =
+      sun.phase === 'day' || sun.phase === 'golden' ? 'light' : 'dark';
+  }
+  if (!scenePaint) {
+    // SVG fills cannot take a custom property through an attribute, so the two
+    // values the shadows need are read back out of the stylesheet.
+    const cs = getComputedStyle(scene);
+    scenePaint = {
+      shade: cs.getPropertyValue('--shade').trim() || '#1e4a3c',
+      alpha: parseFloat(cs.getPropertyValue('--shade-alpha')) || 0,
+    };
+  }
+  const p = { shade: scenePaint.shade, shadeAlpha: scenePaint.alpha };
+
+  const ground = $('groundSvg');
+  const shadows = $('shadowSvg');
+  for (const svgEl of [ground, shadows]) {
+    svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svgEl.replaceChildren();
+  }
+
+  // Where the light is coming from, and therefore where shadows fall.
+  const away = azimuthToScreen(sun.azimuthDeg + 180);
+  const lowSun = Math.max(3, Math.min(60, sun.elevationDeg));
+  const stretch = Math.max(0.6, Math.min(3.2, 1 / Math.tan(rad(lowSun))));
+  const daylight = true;   // shadows are drawn at every hour now
+
+  /*
+   * The figure, centred on the card, and the shadow he casts in that same light.
+   *
+   * Both the sprite and the shadow are placed from these two numbers — the
+   * sprite through CSS custom properties, the shadow directly — so they cannot
+   * drift apart. figY is his feet, set half his height below centre so that his
+   * middle, not his soles, sits on the centre line.
+   */
+  const figEl = $('figureImg');
+  const fbox = figEl.getBoundingClientRect();
+  const figH = fbox.height || H * 0.18;
+  const figW = fbox.width || figH * 0.367;
+
+  const figX = W * 0.5;
+  const figY = H * 0.5 + figH / 2;
+  scene.style.setProperty('--figure-x', '50%');
+  scene.style.setProperty('--figure-bottom', (((H - figY) / H) * 100).toFixed(2) + '%');
+
+  if (daylight) {
+    /*
+     * A real cast shadow: his own silhouette, sheared onto the ground.
+     *
+     * The previous version was an ellipse, which is not what a standing person
+     * casts. This draws the sprite again through a matrix that pins his feet
+     * and sends his head off along the light:
+     *
+     *     (x, 0)  -> (x, 0)            the feet stay put
+     *     (0, -h) -> (dx*L, dy*L)      the head lands at the end of the shadow
+     *
+     * which is matrix(1, 0, -dx*L/h, -dy*L/h, figX, figY). Length is h/tan(e) —
+     * h * stretch — times a foreshortening factor for seeing that ground
+     * obliquely, and capped so a low sun does not throw it off the field.
+     * brightness(0) keeps the alpha and discards the colour, so what lands is
+     * the silhouette rather than a flattened copy of him.
+     */
+    const L = Math.min(figH * 2.4, figH * stretch * 0.55);
+
+    const cast = document.createElementNS(SVGNS, 'g');
+    cast.setAttribute('transform',
+      `matrix(1 0 ${(-away.dx * L / figH).toFixed(4)} ${(-away.dy * L / figH).toFixed(4)} ${figX.toFixed(1)} ${figY.toFixed(1)})`);
+    // The same sun on the same grass, so his shadow is as dark as an
+    // aircraft's. The slight reduction is only because the aircraft PNGs carry
+    // their own soft falloff and this silhouette is flat.
+    cast.setAttribute('opacity', String(p.shadeAlpha * 0.9));
+
+    const sil = document.createElementNS(SVGNS, 'image');
+    sil.setAttribute('class', 'figure-cast');
+    sil.setAttributeNS('http://www.w3.org/1999/xlink', 'href', figEl.getAttribute('src'));
+    sil.setAttribute('href', figEl.getAttribute('src'));
+    sil.setAttribute('x', String(-figW / 2));
+    sil.setAttribute('y', String(-figH));
+    sil.setAttribute('width', String(figW));
+    sil.setAttribute('height', String(figH));
+    cast.appendChild(sil);
+    ground.appendChild(cast);
+  }
+
+  // The aircraft.
+  const byId = new Map(currentSolved().map((s) => [s.id, s]));
+  const shown = sceneIds.map((id) => byId.get(id)).filter(Boolean).slice(0, MAX_SHADOWS);
+
+  for (const s of shown) {
+    const now = sceneProject(s, W, H, inset);
+    const soon = sceneProject({ ...s, ...aheadOf(s, 15) }, W, H, inset);
+    const heading = deg(Math.atan2(soon.sy - now.sy, soon.sx - now.sx)) + 90;
+
+    const g = document.createElementNS(SVGNS, 'g');
+    g.setAttribute('class', 'plane-shadow');
+    g.addEventListener('click', () => {
+      selectedId = selectedId === s.id ? null : s.id;
+      renderPanels();
+      renderScene();
+    });
+
+    /*
+     * The same painted shadow at every hour. There is no sun at midnight to cast
+     * one, so this is a deliberate conceit rather than physics — asked for, and
+     * it reads far better than the glowing dots it replaces.
+     */
+    const art = s.klass === 'helicopter' ? SHADOW_ART.heli : SHADOW_ART.plane;
+    const span = W * 0.62 * Math.max(0.12, Math.min(1.6, now.scale));
+
+    /*
+     * Height softens a shadow and washes it out.
+     *
+     * The sun is half a degree wide, so a shadow's penumbra spreads by about
+     * altitude * tan(0.53°) — nine metres of blur at a kilometre up, which is
+     * why you never actually see the shadow of a cruising airliner. Taking that
+     * literally would erase almost everything here, so this is a fraction of
+     * it: enough that a low helicopter reads crisp and a high jet reads as a
+     * soft smudge, without either disappearing.
+     */
+    const altKm = Math.max(0, (s.altM || 0) / 1000);
+    const blurPx = Math.min(span * 0.06, 0.6 + altKm * 3.2);
+    const fade = Math.max(0.45, 1 - altKm * 0.22);
+
+    const wrap = document.createElementNS(SVGNS, 'g');
+    wrap.setAttribute('transform', `translate(${now.sx.toFixed(1)} ${now.sy.toFixed(1)})`);
+    wrap.appendChild(shadowImage(art, span, heading - 90));
+    g.setAttribute('filter', `blur(${blurPx.toFixed(2)}px)`);
+    g.setAttribute('opacity', String(p.shadeAlpha * fade * (s.id === featuredId ? 1 : 0.8)));
+    g.appendChild(wrap);
+    shadows.appendChild(g);
+  }
+
+}
+
+/** Dead-reckoned lat/lon/dist/bearing a few seconds out, for the scene heading. */
+function aheadOf(s, seconds) {
+  const f = futureState(s, seconds);
+  return { lat: f.lat, lon: f.lon, groundDist: f.groundDist, bearing: f.bearing, relBearing: f.relBearing };
+}
+
+/* ===========================================================================
+   The window pane
+   =========================================================================== */
+
+function markerShape(g, s, px) {
+  const size = Math.max(7, Math.min(px, 90));
+
+  if (s.kind === 'water') {
+    // A hull: flat deck, raked bow, pointing along course over ground.
+    const h = Math.max(4, size * 0.34);
+    const path = document.createElementNS(SVGNS, 'path');
+    path.setAttribute('class', 'body');
+    path.setAttribute(
+      'd',
+      `M ${-size / 2} ${-h / 2} L ${size / 2 - h * 0.5} ${-h / 2} L ${size / 2} 0 ` +
+      `L ${size / 2 - h * 0.5} ${h / 2} L ${-size / 2} ${h / 2} Z`,
+    );
+    g.appendChild(path);
+    return size;
+  }
+
+  if (s.klass === 'helicopter') {
+    // Fuselage dot plus a rotor disc, which is what you actually pick out.
+    const disc = document.createElementNS(SVGNS, 'circle');
+    disc.setAttribute('class', 'ring');
+    disc.setAttribute('r', String(Math.max(5, size * 0.5)));
+    g.appendChild(disc);
+    const body = document.createElementNS(SVGNS, 'circle');
+    body.setAttribute('class', 'body');
+    body.setAttribute('r', String(Math.max(2, size * 0.16)));
+    g.appendChild(body);
+    return size;
+  }
+
+  // Fixed wing: a swept arrowhead pointing along track.
+  const w = Math.max(7, size);
+  const path = document.createElementNS(SVGNS, 'path');
+  path.setAttribute('class', 'body');
+  path.setAttribute('d', `M ${w / 2} 0 L ${-w / 2} ${-w * 0.42} L ${-w * 0.25} 0 L ${-w / 2} ${w * 0.42} Z`);
+  g.appendChild(path);
+  return w;
+}
+
+function drawBackdrop(W, H) {
+  const defs = document.createElementNS(SVGNS, 'defs');
+  defs.innerHTML =
+    `<linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">` +
+    `<stop offset="0%" stop-color="var(--sky-top)"/><stop offset="100%" stop-color="var(--sky-bottom)"/>` +
+    `</linearGradient>` +
+    `<linearGradient id="seaGrad" x1="0" y1="0" x2="0" y2="1">` +
+    `<stop offset="0%" stop-color="var(--sea-top)"/><stop offset="100%" stop-color="var(--sea-bottom)"/>` +
+    `</linearGradient>` +
+    // Atmospheric haze, thickest at the horizon and gone within a few degrees
+    // either side. This is what stops the sky meeting the sea as a hard edge.
+    `<linearGradient id="hazeGrad" x1="0" y1="0" x2="0" y2="1">` +
+    `<stop offset="0%" stop-color="var(--horizon-haze)" stop-opacity="0"/>` +
+    `<stop offset="50%" stop-color="var(--horizon-haze)" stop-opacity="0.85"/>` +
+    `<stop offset="100%" stop-color="var(--horizon-haze)" stop-opacity="0"/>` +
+    `</linearGradient>`;
+  svg.appendChild(defs);
+
+  // The visible horizon sits one dip angle below eye level.
+  const dip = horizonDipDeg(view.eyeAltM);
+  const h = project(view.facingDeg, -dip, view, W, H);
+  const horizonY = h ? Math.max(-H, Math.min(2 * H, h.py)) : H / 2;
+
+  const sky = document.createElementNS(SVGNS, 'rect');
+  sky.setAttribute('x', '0');
+  sky.setAttribute('y', '0');
+  sky.setAttribute('width', String(W));
+  sky.setAttribute('height', String(Math.max(0, horizonY)));
+  sky.setAttribute('fill', 'url(#skyGrad)');
+  svg.appendChild(sky);
+
+  const sea = document.createElementNS(SVGNS, 'rect');
+  sea.setAttribute('x', '0');
+  sea.setAttribute('y', String(Math.max(0, horizonY)));
+  sea.setAttribute('width', String(W));
+  sea.setAttribute('height', String(Math.max(0, H - horizonY)));
+  sea.setAttribute('fill', 'url(#seaGrad)');
+  svg.appendChild(sea);
+
+  const hazeH = Math.max(10, H * 0.17);
+  const haze = document.createElementNS(SVGNS, 'rect');
+  haze.setAttribute('x', '0');
+  haze.setAttribute('width', String(W));
+  haze.setAttribute('y', String(horizonY - hazeH / 2));
+  haze.setAttribute('height', String(hazeH));
+  haze.setAttribute('fill', 'url(#hazeGrad)');
+  svg.appendChild(haze);
+
+  const line = document.createElementNS(SVGNS, 'line');
+  line.setAttribute('class', 'horizon');
+  line.setAttribute('x1', '0');
+  line.setAttribute('x2', String(W));
+  line.setAttribute('y1', String(horizonY));
+  line.setAttribute('y2', String(horizonY));
+  svg.appendChild(line);
+
+  return horizonY;
+}
+
+/**
+ * Three plain anchors across the top, in place of a compass strip.
+ *
+ * "ESE" is not a word most people use, and a row of bearings in degrees is the
+ * opposite of what this view is for. The card says "far over to your left", so
+ * the window says left, straight ahead, right, and the two agree. The bearings
+ * are still in the detail table.
+ */
+function drawFrameLabels(W, H, taken) {
+  const marks = [
+    { x: 10, text: 'left', anchor: 'start' },
+    { x: W / 2, text: 'ahead', anchor: 'middle' },
+    { x: W - 10, text: 'right', anchor: 'end' },
+  ];
+  for (const m of marks) {
+    const t = document.createElementNS(SVGNS, 'text');
+    t.setAttribute('class', 'frame-label');
+    t.setAttribute('x', String(m.x));
+    t.setAttribute('y', '16');
+    t.setAttribute('text-anchor', m.anchor);
+    t.textContent = m.text;
+    svg.appendChild(t);
+    taken.push({ x: m.x, y: 16, w: m.text.length * 6.2 });
+  }
+
+  // A short tick at dead centre, so "straight ahead" has something to point at.
+  const tick = document.createElementNS(SVGNS, 'line');
+  tick.setAttribute('class', 'grid-line');
+  tick.setAttribute('x1', String(W / 2));
+  tick.setAttribute('x2', String(W / 2));
+  tick.setAttribute('y1', '21');
+  tick.setAttribute('y2', '29');
+  svg.appendChild(tick);
+}
+
+/**
+ * Distance rings on the water and elevation arcs in the sky.
+ *
+ * These are drawn as sampled polylines rather than straight lines because they
+ * are not straight. A set of directions at constant elevation is a cone, and a
+ * cone projects to a conic section, so at a 100-degree field of view the arcs
+ * visibly bow. Only the true horizon is genuinely straight, because a plane
+ * through the camera centre is the one case that projects to a line.
+ */
+function drawGrid(W, H) {
+  const half = view.fovXDeg / 2;
+
+  const sampleArc = (elevationAt) => {
+    const pts = [];
+    for (let ra = -half - 4; ra <= half + 4; ra += 3) {
+      const p = project(view.facingDeg + ra, elevationAt(), view, W, H);
+      if (p) pts.push(p);
+    }
+    return pts;
+  };
+
+  /*
+   * Drawn, but deliberately not labelled. The arcs give the pane a sense of
+   * depth — things further away sit closer to the horizon — without putting
+   * "20 km" and "10°" on screen for someone who only wants to know where to
+   * look. The actual figures live in the detail panel.
+   */
+  const addArc = (pts, cls) => {
+    const visible = pts.filter((p) => p.py > -30 && p.py < H + 30 && p.px > -30 && p.px < W + 30);
+    if (visible.length < 2) return;
+    const poly = document.createElementNS(SVGNS, 'polyline');
+    poly.setAttribute('class', cls);
+    poly.setAttribute('points', pts.map((p) => `${p.px.toFixed(1)},${p.py.toFixed(1)}`).join(' '));
+    svg.appendChild(poly);
+  };
+
+  // Water: rings of constant ground distance, which is what you actually want
+  // to know about a ship. Anything past the visible horizon is not drawn.
+  const horizon = horizonDistanceM(view.eyeAltM);
+  for (const d of [20000, 10000, 5000, 2000, 1000, 500, 250]) {
+    if (d > horizon) continue;
+    const el = elevationDeg(d, 0, view.eyeAltM);
+    addArc(sampleArc(() => el), 'grid-arc');
+  }
+
+  // Sky: arcs of constant elevation angle.
+  for (const el of [5, 10, 20, 30, 40, 50, 60, 70]) {
+    addArc(sampleArc(() => el), 'grid-arc');
+  }
+}
+
+/**
+ * Place labels without moving the markers.
+ *
+ * The markers are the answer to "where do I look", so they stay exactly where
+ * the projection puts them. Only the text dodges, with a leader line back to
+ * its marker when it has been pushed away.
+ */
+function placeLabel(taken, x, y, wApprox) {
+  const H_STEP = 13;
+  for (let i = 0; i < 12; i++) {
+    const dy = (i % 2 === 0 ? 1 : -1) * Math.ceil(i / 2) * H_STEP;
+    const cy = y + dy;
+    const clash = taken.some((t) => Math.abs(t.y - cy) < 11 && Math.abs(t.x - x) < (t.w + wApprox) / 2);
+    if (!clash) {
+      taken.push({ x, y: cy, w: wApprox });
+      return cy;
+    }
+  }
+  taken.push({ x, y, w: wApprox });
+  return y;
+}
+
+function renderWindow() {
+  const rect = $('window').getBoundingClientRect();
+  const W = Math.max(320, Math.round(rect.width));
+  const H = Math.max(200, Math.round(rect.height));
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.replaceChildren();
+
+  // One collision list for every piece of text in the pane, so the frame
+  // anchors and the contact names dodge each other.
+  const labelsTaken = [];
+
+  drawBackdrop(W, H);
+  drawGrid(W, H);
+  drawFrameLabels(W, H, labelsTaken);
+
+  // First pass: work out what is actually in frame.
+  const items = [];
+  for (const s of currentSolved()) {
+    // Hidden by the curve of the Earth, or reporting no usable altitude at all —
+    // either way there is no honest place to put it in the pane.
+    if (s.belowHorizon || s.altUnknown) continue;
+    const p = project(s.bearing, s.elev, view, W, H);
+    if (!p) continue;
+    // A generous margin so a contact half out of frame still shows its edge.
+    if (p.px < -60 || p.px > W + 60 || p.py < -60 || p.py > H + 60) continue;
+    items.push({ s, p });
+  }
+
+  /*
+   * On a normal afternoon there are seventy-odd aircraft in frame, all of them
+   * three to thirty kilometres out and so all of them crammed into a few
+   * degrees above the horizon. Labelling every one turns that band into a wall
+   * of text. Label the nearest handful, which is what you would actually be
+   * looking at, plus whatever is selected; everything else stays a marker you
+   * can click.
+   */
+  const LABEL_LIMIT = 6;
+  const labelIds = new Set(
+    items
+      .filter((it) => withinRadius(it.s) && worthLooking(it.s))
+      .sort((a, b) => apparentDeg(b.s) - apparentDeg(a.s))
+      .slice(0, LABEL_LIMIT)
+      .map((it) => it.s.id),
+  );
+  if (selectedId) labelIds.add(selectedId);
+  if (featuredId) labelIds.add(featuredId);
+
+  // Second pass: draw far contacts first, so near ones sit on top.
+  items.sort((a, b) => b.s.groundDist - a.s.groundDist);
+  const drawn = items.length;
+
+  for (const { s, p } of items) {
+    const g = document.createElementNS(SVGNS, 'g');
+    const highlighted = s.id === selectedId || s.id === featuredId;
+    g.setAttribute('class', `marker ${s.kind === 'air' ? 'mk-air' : 'mk-sea'}${highlighted ? ' sel' : ''}`);
+    g.setAttribute('transform', `translate(${p.px.toFixed(1)} ${p.py.toFixed(1)})`);
+    g.addEventListener('click', () => {
+      selectedId = selectedId === s.id ? null : s.id;
+      renderPanels();
+      renderWindow();
+    });
+
+    const inner = document.createElementNS(SVGNS, 'g');
+    const rot = screenHeading(s, p, W, H);
+    if (rot !== null) inner.setAttribute('transform', `rotate(${rot.toFixed(1)})`);
+    const px = apparentPx(s.sizeM, Math.max(50, s.groundDist), p.focal);
+    const shapeSize = markerShape(inner, s, px);
+    g.appendChild(inner);
+
+    const hit = document.createElementNS(SVGNS, 'circle');
+    hit.setAttribute('class', 'hit');
+    hit.setAttribute('r', String(Math.max(14, shapeSize * 0.7)));
+    g.appendChild(hit);
+
+    svg.appendChild(g);
+    if (!labelIds.has(s.id)) continue;
+
+    // Label, dodged vertically only. The marker itself never moves — it is the
+    // answer to "where do I look" — so only the text gives way.
+    const text = shortName(s);
+    const wApprox = text.length * 6.2;
+    const offset = Math.max(11, shapeSize * 0.6 + 7);
+    // Above the marker normally, below it when the marker is near the top of
+    // the pane and the label would otherwise be clipped off.
+    const baseY = p.py - offset < 12 ? offset + 4 : -offset;
+
+    // Keep the text inside the pane even when its marker is at or past the edge.
+    let anchor = 'middle';
+    let dx = 0;
+    if (p.px - wApprox / 2 < 4) {
+      anchor = 'start';
+      dx = 4 - p.px;
+    } else if (p.px + wApprox / 2 > W - 4) {
+      anchor = 'end';
+      dx = W - 4 - p.px;
+    }
+    const drawnCentre = p.px + dx;
+    const labelY = placeLabel(labelsTaken, drawnCentre, p.py + baseY, wApprox) - p.py;
+
+    if (Math.abs(labelY - baseY) > 3 || Math.abs(dx) > 3) {
+      const lead = document.createElementNS(SVGNS, 'line');
+      lead.setAttribute('class', 'lead');
+      lead.setAttribute('x1', '0');
+      lead.setAttribute('y1', String(baseY + 3));
+      lead.setAttribute('x2', String(dx));
+      lead.setAttribute('y2', String(labelY + 3));
+      g.appendChild(lead);
+    }
+
+    const tag = document.createElementNS(SVGNS, 'text');
+    tag.setAttribute('class', 'tag' + (highlighted ? '' : ' dim'));
+    tag.setAttribute('text-anchor', anchor);
+    tag.setAttribute('x', String(dx.toFixed(1)));
+    tag.setAttribute('y', String(labelY));
+    tag.textContent = text;
+    g.appendChild(tag);
+  }
+
+  const note = $('emptyNote');
+  if (drawn === 0) {
+    note.hidden = false;
+    note.textContent = contacts.length
+      ? 'Nothing is passing your window at the moment.'
+      : lastError
+        ? "Can't reach the data right now."
+        : 'Looking…';
+  } else {
+    note.hidden = true;
+  }
+}
+
+/* ===========================================================================
+   Status and table
+   =========================================================================== */
+
+/**
+ * The one thing worth looking at, written as a sentence.
+ *
+ * Chosen by apparent size, because that is what "you would notice it" actually
+ * means — a ferry a few hundred metres out is a bigger thing in the window
+ * than an airliner eight kilometres away, even though the airliner is larger.
+ */
+function renderNow(solved) {
+  const card = $('nowCard');
+  const framed = solved.filter(inWindow);
+  // Tapping something shows it regardless; the automatic pick will not promote
+  // anything beyond the radius or too small to find.
+  const visible = framed.filter((s) => withinRadius(s) && worthLooking(s));
+
+  let featured = selectedId ? framed.find((s) => s.id === selectedId) : null;
+
+  if (!featured && visible.length) {
+    const best = visible.reduce((a, b) => (apparentDeg(a) >= apparentDeg(b) ? a : b));
+    const held = visible.find((s) => s.id === featuredId);
+    // Stay with whatever is already on screen unless something is clearly more
+    // noticeable, so the card does not flip between two similar things every
+    // few seconds while someone is still reading it.
+    featured = held && apparentDeg(held) >= apparentDeg(best) * 0.6 ? held : best;
+  }
+  /*
+   * Nothing inside the radius, but something IS up there and visible: name it.
+   *
+   * This card used to say "nothing much to see" and then, in the next sentence,
+   * name a helicopter two kilometres past the radius. Those are two statements
+   * that cannot both be true. Either the sky is empty or it is not, and if
+   * there is a real aircraft visible from this window then the card's job is to
+   * say what it is. The distance on the card does the rest of the work — "about
+   * 6.2 km away, a distant speck" is honest without needing a disclaimer.
+   *
+   * The radius still governs everything else: the supporting cards, the shadows
+   * on the field, and the counts.
+   */
+  if (!featured) {
+    featured = framed
+      .filter(worthLooking)
+      .sort((a, b) => a.groundDist - b.groundDist)[0] || null;
+  }
+  featuredId = featured ? featured.id : null;
+
+  if (!featured) {
+    // Now "nothing" really does mean nothing in your window.
+    card.className = 'now';
+    card.innerHTML =
+      `<div class="eyebrow">${EMPTY_EYEBROW}</div>` +
+      `<h2>${escapeHtml(emptyLine())}</h2>`;
+    return null;
+  }
+
+  // Ask for this one's route, once. Nothing else on screen triggers a lookup.
+  if (featured.kind === 'air') ensureRoute(featured.label);
+
+  /*
+   * The card used to carry a bulleted description here — how far, how big, which
+   * way it was crossing, how high, how long it had left. All of it is still in
+   * the details panel as figures. On the card it was padding: you are looking at
+   * the aircraft, so what you want from the app is what it IS, not a narration
+   * of what you can already see.
+   *
+   * What remains only ever fires for vessels, which are hidden by default but
+   * not removed.
+   */
+  const facts = [
+    featured.destination ? `heading for ${titleCase(featured.destination)}` : null,
+    featured.extra && featured.extra.awaitingStatic ? 'still anonymous, no name broadcast yet' : null,
+  ].filter(Boolean);
+
+  const ident = identLine(featured);
+  card.className = 'now ' + (featured.kind === 'air' ? 'air' : 'sea');
+  card.innerHTML =
+    `<div class="eyebrow">${featured.kind === 'air' ? 'Overhead' : 'On the water'}</div>` +
+    `<h2>${escapeHtml(headline(featured))}</h2>` +
+    (ident ? `<div class="ident">${escapeHtml(ident)}</div>` : '') +
+    routeHtml(featured) +
+    (facts.length ? `<ul class="facts">${facts.map((f) => `<li>${escapeHtml(f)}</li>`).join('')}</ul>` : '') +
+    (featured.fact ? `<div class="factoid"><b>Worth knowing</b>${escapeHtml(featured.fact)}</div>` : '');
+  return featured;
+}
+
+/*
+ * The empty sky.
+ *
+ * This is the screen this app shows most of the time: something is inside five
+ * kilometres of this window about half the time, and inside three about one
+ * time in eight. A dead "Nothing in your window" was the least-considered
+ * sentence in the app and by far the most-read, so it rotates instead.
+ *
+ * Keyed to the minute rather than the poll, or it would reshuffle every few
+ * seconds while you were reading it.
+ */
+const EMPTY_EYEBROW = 'Right now';
+const EMPTY_LINES = [
+  'Empty sky. Give it a minute.',
+  'Nothing up there but weather.',
+  'All quiet. Something usually turns up.',
+  'Just clouds doing their thing.',
+];
+const emptyLine = () =>
+  EMPTY_LINES[Math.floor(Date.now() / 60000) % EMPTY_LINES.length];
+
+function renderAlso(solved, featured) {
+  const list = $('alsoList');
+  /*
+   * Three, not six. Flights-only over this window means most of what is up
+   * there is ten to thirty kilometres off, so a longer list is half a dozen
+   * cards that all say "a distant speck" — true, and useless to read. The card
+   * above is the thing to look at; this is just context, and the line
+   * underneath carries the rest.
+   */
+  const visible = solved
+    .filter(onScreen)
+    .filter((s) => !featured || s.id !== featured.id)
+    .sort((a, b) => apparentDeg(b) - apparentDeg(a))
+    .slice(0, 3);
+
+  $('alsoHead').hidden = visible.length === 0;
+  renderAlso.shown = visible;
+  list.replaceChildren();
+
+  for (const s of visible) {
+    // At most three more lookups, each cached per callsign for the life of the
+    // page, so the route line is not mysteriously absent from the smaller cards.
+    if (s.kind === 'air') ensureRoute(s.label);
+    const el = document.createElement('div');
+    el.className = 'card ' + (s.kind === 'air' ? 'air' : 'sea');
+    const id = identLine(s);
+    el.innerHTML =
+      `<div class="t">${escapeHtml(headline(s))}</div>` +
+      (id ? `<div class="ident">${escapeHtml(id)}</div>` : '') +
+      routeHtml(s, 'card');
+    el.addEventListener('click', () => {
+      selectedId = s.id;
+      renderPanels();
+      renderWindow();
+    });
+    list.appendChild(el);
+  }
+
+}
+
+/*
+ * Feed status, with no pills.
+ *
+ * The counts that used to sit here were all tallies of things the screen does
+ * not show: aircraft across the aggregator's whole query area, parked aircraft,
+ * hidden vessels. None of them matched the markers in the pane or the rows in
+ * the table, which made them read as contradictions rather than information.
+ *
+ * What is worth keeping is the failure case, because a silent app and a broken
+ * feed look identical. That is a plain sentence now, and nothing at all when
+ * everything is working.
+ */
+function renderStatus() {
+  const box = $('status');
+  box.replaceChildren();
+  if (!sources) return;
+
+  const air = sources.air || {};
+  const sea = sources.sea || {};
+  const problems = [];
+  if (air.error) problems.push(`No aircraft data: ${air.error}`);
+  if (view.showWater && sea.error && sea.status !== 'connected') problems.push(`No vessel data: ${sea.error}`);
+  if (lastError) problems.push(`Cannot reach the server: ${lastError}`);
+  if (!problems.length) return;
+
+  const note = document.createElement('p');
+  note.className = 'status-note';
+  note.textContent = problems.join(' ');
+  box.appendChild(note);
+}
+
+function fmtDistance(m) {
+  if (m < 1000) return `${Math.round(m)} m`;
+  if (m < 10000) return `${(m / 1000).toFixed(2)} km`;
+  return `${(m / 1000).toFixed(1)} km`;
+}
+
+function fmtHeight(s) {
+  if (s.kind === 'water') return '<span class="meta">sea level</span>';
+  if (s.onGround) return '<span class="meta">on ground</span>';
+  if (!Number.isFinite(s.altM) || s.altM === 0) return '<span class="meta">unknown</span>';
+  const badge = s.altSource === 'baro' ? '<span class="badge" title="Barometric, referenced to 29.92 inHg rather than sea level">baro</span>' : '';
+  return `<span class="num">${Math.round(s.altM * M_TO_FT).toLocaleString()} ft</span>${badge}`;
+}
+
+function fmtMoving(s) {
+  const bits = [];
+  if (Number.isFinite(s.speedKt)) bits.push(`${Math.round(s.speedKt)} kt`);
+  if (Number.isFinite(s.courseDeg)) bits.push(`${Math.round(s.courseDeg)}° ${cardinal(s.courseDeg)}`);
+  if (Number.isFinite(s.verticalRateFpm) && Math.abs(s.verticalRateFpm) > 150) {
+    bits.push(s.verticalRateFpm > 0 ? '↑ climbing' : '↓ descending');
+  }
+  return bits.length ? `<span class="num">${bits.join(' · ')}</span>` : '<span class="meta">·</span>';
+}
+
+/** The whole point of the app, in one string. */
+function fmtLook(s) {
+  const half = view.fovXDeg / 2;
+  if (Math.abs(s.relBearing) > 90) {
+    return `<span class="meta">behind you (${Math.round(s.bearing)}°)</span>`;
+  }
+  const side = s.relBearing > 1 ? 'right' : s.relBearing < -1 ? 'left' : 'straight ahead';
+  const amount = Math.abs(s.relBearing) < 1 ? '' : `${Math.abs(Math.round(s.relBearing))}° `;
+  const up = s.elev >= 0 ? 'up' : 'down';
+  const inFrame = Math.abs(s.relBearing) <= half;
+  const cls = s.kind === 'air' ? 'air' : 'sea';
+  return (
+    `<span class="looktech ${cls}">${amount}${side}, ${Math.abs(s.elev).toFixed(1)}° ${up}</span>` +
+    (inFrame ? '' : '<span class="badge">off pane</span>')
+  );
+}
+
+function renderTable(pre) {
+  const body = $('contactBody');
+  const solved = (pre || currentSolved()).slice().sort((a, b) => a.groundDist - b.groundDist);
+
+  if (!solved.length) {
+    body.innerHTML = `<tr><td colspan="5" class="empty-row">${
+      lastError ? `Server unreachable: ${lastError}` : 'Empty on both counts right now.'
+    }</td></tr>`;
+    return;
+  }
+
+  body.replaceChildren();
+  for (const s of solved) {
+    const tr = document.createElement('tr');
+    tr.className =
+      (s.kind === 'air' ? 'air' : 'sea') +
+      (s.id === selectedId ? ' sel' : '') +
+      (s.belowHorizon ? ' hidden-contact' : '');
+    tr.addEventListener('click', () => {
+      selectedId = selectedId === s.id ? null : s.id;
+      renderPanels();
+      renderWindow();
+    });
+
+    const badges =
+      (s.estimated ? '<span class="badge" title="Position extrapolated since the last fix">est</span>' : '') +
+      (s.belowHorizon ? '<span class="badge" title="Beyond the visible horizon, hidden by the curve of the Earth">below horizon</span>' : '') +
+      (s.extra && s.extra.awaitingStatic ? '<span class="badge" title="Position received, but the AIS static message with name and type has not arrived yet">awaiting name</span>' : '') +
+      (s.extra && s.extra.emergency ? `<span class="badge" title="Squawking ${s.extra.emergency}">${s.extra.emergency}</span>` : '');
+
+    tr.innerHTML =
+      `<td><div class="name">${escapeHtml(s.label)}${badges}</div>` +
+      `<div class="meta">${escapeHtml(s.sublabel || s.klass)}</div></td>` +
+      `<td data-label="Bearing">${fmtLook(s)}</td>` +
+      `<td class="num" data-label="Range">${fmtDistance(s.groundDist)}<div class="meta">${(s.groundDist * M_TO_NM).toFixed(1)} nm</div></td>` +
+      `<td data-label="Height">${fmtHeight(s)}</td>` +
+      `<td data-label="Moving">${fmtMoving(s)}</td>`;
+    body.appendChild(tr);
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+
+/* ===========================================================================
+   Calibration wiring
+   =========================================================================== */
+
+function bindPair(numId, rangeId, key, after) {
+  const n = $(numId);
+  const r = rangeId ? $(rangeId) : null;
+  const set = (raw) => {
+    const v = Number(raw);
+    if (!Number.isFinite(v)) return;
+    view[key] = v;
+    n.value = String(v);
+    if (r) r.value = String(v);
+    saveSettings(view);
+    if (after) after();
+    renderCalHints();
+    renderPanels();
+    renderScene();
+    if ($('techPanel').open) renderWindow();
+  };
+  n.addEventListener('input', () => set(n.value));
+  if (r) r.addEventListener('input', () => set(r.value));
+  n.value = String(view[key]);
+  if (r) r.value = String(view[key]);
+}
+
+const norm360 = (d) => (((d % 360) + 360) % 360);
+
+/**
+ * The facing input shows the bearing in whichever frame the user says they
+ * measured it in; `view.facingDeg` is always true. Ticking the magnetic box
+ * therefore leaves the number in the box alone and changes what it means,
+ * rather than rewriting it to a number the user never measured.
+ */
+const facingShown = () => (view.magneticInput ? norm360(view.facingDeg + DECLINATION_W) : view.facingDeg);
+
+function syncFacingInputs() {
+  const shown = Number(facingShown().toFixed(1));
+  $('facing').value = String(shown);
+  $('facingRange').value = String(shown);
+}
+
+function setFacingFromInput(raw) {
+  const v = Number(raw);
+  if (!Number.isFinite(v)) return;
+  view.facingDeg = norm360(view.magneticInput ? v - DECLINATION_W : v);
+  saveSettings(view);
+  renderCalHints();
+  renderWindow();
+  renderPanels();
+}
+
+function renderCalHints() {
+  $('facingCardinal').textContent = view.magneticInput ? 'magnetic' : 'true';
+  $('declValue').textContent = DECLINATION_W.toFixed(1);
+  $('facingTrue').textContent = view.magneticInput
+    ? `${view.facingDeg.toFixed(1)}° true (${cardinal(view.facingDeg)}) after subtracting declination.`
+    : `${view.facingDeg.toFixed(1)}° true (${cardinal(view.facingDeg)}). A phone compass would read about ${norm360(view.facingDeg + DECLINATION_W).toFixed(1)}°.`;
+
+  $('radiusHint').textContent =
+    `Anything further than ${view.viewRadiusKm} km is treated as scenery. It is not named, listed or drawn.`;
+
+  $('whereHint').textContent = `${view.lat.toFixed(4)}, ${view.lon.toFixed(4)}`;
+  paintRanges();
+
+  const so = $('serverOrigin');
+  if (serverObserver && (Math.abs(serverObserver.lat - view.lat) > 0.01 || Math.abs(serverObserver.lon - view.lon) > 0.01)) {
+    so.textContent = `The server is asking about ${serverObserver.lat.toFixed(4)}, ${serverObserver.lon.toFixed(4)} instead. Set HW_LAT/HW_LON to match.`;
+    so.className = 'hint warn';
+  } else {
+    so.textContent = 'Set on the server with HW_LAT and HW_LON.';
+    so.className = 'hint';
+  }
+
+}
+
+/*
+ * The filled part of a custom slider is not drawn for you, so it is a gradient
+ * whose hard stop sits at the value. Kept in one place and called from
+ * renderCalHints, which already runs after every change, plus a live `input`
+ * listener so the fill tracks the thumb during a drag rather than after it.
+ */
+function paintRange(r) {
+  const min = Number(r.min || 0);
+  const max = Number(r.max || 100);
+  const pct = max > min ? ((Number(r.value) - min) / (max - min)) * 100 : 0;
+  r.style.setProperty('--fill', pct.toFixed(2) + '%');
+}
+const paintRanges = () =>
+  document.querySelectorAll('.field input[type="range"]').forEach(paintRange);
+
+function initCalibration() {
+  bindPair('radius', 'radiusRange', 'viewRadiusKm');
+  bindPair('fov', 'fovRange', 'fovXDeg');
+
+  // Facing is bound by hand because the number on screen and the number stored
+  // are in different reference frames whenever the magnetic box is ticked.
+  $('facing').addEventListener('input', (e) => {
+    setFacingFromInput(e.target.value);
+    // Move the slider to match, but never write back into the box while it is
+    // being typed in — normalising a half-typed number fights the user.
+    $('facingRange').value = String(facingShown());
+  });
+  $('facingRange').addEventListener('input', (e) => {
+    setFacingFromInput(e.target.value);
+    $('facing').value = e.target.value;
+  });
+
+  const mag = $('magnetic');
+  mag.checked = !!view.magneticInput;
+  mag.addEventListener('change', () => {
+    // The number in the box stays put; only what it means changes.
+    view.magneticInput = mag.checked;
+    setFacingFromInput($('facing').value);
+    syncFacingInputs();
+  });
+  syncFacingInputs();
+
+  document.querySelectorAll('.field input[type="range"]').forEach((r) => {
+    r.addEventListener('input', () => paintRange(r));
+  });
+  paintRanges();
+
+  $('resetCal').addEventListener('click', () => {
+    Object.assign(view, DEFAULTS);
+    saveSettings(view);
+    for (const [id, key] of [['radius', 'viewRadiusKm'], ['fov', 'fovXDeg']]) {
+      $(id).value = String(view[key]);
+      const r = $(id + 'Range');
+      if (r) r.value = String(view[key]);
+    }
+    $('magnetic').checked = false;
+    applyFilters();
+    syncFacingInputs();
+    renderCalHints();
+    renderWindow();
+    renderPanels();
+  });
+}
+
+/*
+ * There was a theme toggle here. It is gone, along with the header that held
+ * it, so light and dark now follow the operating system through
+ * prefers-color-scheme and nothing sets data-theme. Both palettes are still
+ * maintained; there is simply no control.
+ *
+ * Note this also means a previously saved theme cannot strand anyone on a
+ * setting they can no longer reach.
+ */
+
+/* ===========================================================================
+   Boot
+   =========================================================================== */
+
+initCalibration();
+renderCalHints();
+
+// Settle the scene before the first paint, so the right painting is the only
+// one ever requested.
+renderScene();
+
+poll();
+setInterval(poll, 3000);
+
+// Re-project continuously so dead reckoning is visible as motion rather than
+// as a jump every three seconds.
+let lastFrame = 0;
+function frame(t) {
+  if (t - lastFrame > 90) {
+    lastFrame = t;
+    renderScene();
+    // The instrument pane is expensive and usually folded away.
+    if ($('techPanel').open) renderWindow();
+  }
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+let resizeTimer = null;
+addEventListener('resize', () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => { renderScene(); if ($('techPanel').open) renderWindow(); }, 80);
+});
+// Draw the instrument the moment it is opened, rather than up to a frame later.
+$('techPanel').addEventListener('toggle', () => { if ($('techPanel').open) renderWindow(); });
+</script>
+</body>
+</html>

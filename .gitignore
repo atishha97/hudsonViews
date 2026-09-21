@@ -1,0 +1,18 @@
+# Source paintings. 21-25 MB each, and the app never loads them: it serves the
+# derived JPEGs (dayView-bg.jpg, nightView-bg.jpg) that were cropped and scaled
+# down from these. Keep your own backup, they are not recoverable from here.
+public/dayView.png
+public/newDayView.png
+public/nightView.png
+public/flight.png
+
+# Intermediate sprite sources, superseded by the -sprite.png versions in use.
+public/favBoy.png
+public/favBoy2.png
+public/figure.png
+
+# Local Claude Code permissions, specific to one machine.
+.claude/settings.local.json
+
+.DS_Store
+node_modules/
