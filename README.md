@@ -79,6 +79,31 @@ painting behind them, which is lovely until it eats the text. I measured the
 contrast of every line of type against what actually ends up behind it, rather
 than trusting my eye, and tuned the glass until it all stayed readable.
 
+## What I would do next
+
+**Boats.** He watches those too, and the whole pipeline is already built and
+quietly running: vessel tracking, hulls that point the way they are going, their
+own colour. It is switched off because the Hudson deserves better than a dot,
+and because a ferry, a tug shoving a barge and a cruise ship should not all look
+alike.
+
+**Go deeper on each aircraft.** Right now it names the model and tells you one
+thing about it. The really interesting question is about the specific airframe
+in the sky: how old it is, who flew it before, whether it is the oldest one still
+in service. That is a different kind of fact, and a better one.
+
+**A logbook.** Spotters keep lists. If it quietly recorded what went over, the
+app stops being a live view and becomes a collection: what you saw this month,
+the first time a type showed up, the one that only comes through on Sundays.
+
+**Tell him when something unusual passes.** Most of what crosses this window is
+the same Newark departures. The pleasure is in the exception, so the app should
+know the difference and say so, rather than leaving him to notice.
+
+**Let the night back in.** There is a night painting, and the app knows exactly
+where the sun is. It is pinned to daylight for now. Unpinning it is nearly free
+and the window is at its best after dark anyway.
+
 ## Running it yourself
 
 ```bash
