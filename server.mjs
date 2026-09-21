@@ -43,9 +43,12 @@ const PORT = num(process.env.PORT, 8808);
  * of the subtraction on the same datum. Newport sits close to sea level, so
  * "floor height + a couple of metres" is a good approximation here.
  */
+/* Confirmed by the owner on 2026-09-21, not guessed: the window is at
+   40.7215, -74.0339 and faces due east, true. Earlier values in this file were
+   placeholders. HW_LAT / HW_LON still override for anyone else running it. */
 const OBSERVER = {
-  lat: num(process.env.HW_LAT, 40.7267),
-  lon: num(process.env.HW_LON, -74.0345),
+  lat: num(process.env.HW_LAT, 40.7215),
+  lon: num(process.env.HW_LON, -74.0339),
   eyeAltM: num(process.env.HW_EYE_ALT_M, 40),
 };
 

@@ -1872,15 +1872,18 @@ function apparentDeg(s) {
 const DECLINATION_W = 13.0;
 
 const DEFAULTS = {
-  facingDeg: 90,      // true bearing, due east across the Hudson
+  facingDeg: 90,      // true bearing, due east. Confirmed by the owner.
   /* 85 degrees is about as wide as a flat rectilinear rendering stays natural.
      Push it past ~110 and the edges stretch the way a wide-angle photograph
      does — still geometrically correct, but no longer what the eye reports. */
   fovXDeg: 85,
   pitchDeg: 7,        // looking slightly up, so the sky gets most of the pane
   eyeAltM: 40,
-  lat: 40.7267,
-  lon: -74.0345,
+  // Confirmed by the owner, not guessed. Must agree with OBSERVER in
+  // server.mjs, or the page computes bearings from one spot while the
+  // server fetches traffic around another. The panel warns when they drift.
+  lat: 40.7215,
+  lon: -74.0339,
   magneticInput: false,
   // Aircraft only for now. The AIS half of the server keeps running; this is a
   // display filter, so turning boats back on is a checkbox rather than an edit.
