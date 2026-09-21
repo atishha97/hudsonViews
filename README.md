@@ -7,9 +7,11 @@ where.
 
 So I built him a window that answers.
 
-![A Sikorsky S-76 named in a glass card on the left, with its shadow crossing the painted field on the right, over a figure looking up at it.](docs/screenshot.jpg)
+### → [hudson-window-production.up.railway.app](https://hudson-window-production.up.railway.app)
 
-**Live at [hudson-window-production.up.railway.app](https://hudson-window-production.up.railway.app)**
+Open it and look at the sky over Jersey City right now.
+
+![A Sikorsky S-76 named in a glass card on the left, with its shadow crossing the painted field on the right, over a figure looking up at it.](docs/screenshot.jpg)
 
 ## What it does
 
