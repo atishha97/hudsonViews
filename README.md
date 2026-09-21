@@ -104,6 +104,21 @@ know the difference and say so, rather than leaving him to notice.
 where the sun is. It is pinned to daylight for now. Unpinning it is nearly free
 and the window is at its best after dark anyway.
 
+**Let other people add their own window.** Sign up, drop a pin on where you
+live, say which way you face, and get this for your own sky. Everything that
+makes the view specific is currently one set of numbers written into the code,
+so the work is really about making a window into a thing you own rather than a
+constant.
+
+That one cuts against the grain of the rest of the project, and it is worth being
+honest about why. Accounts mean a database and a login, which is the end of no
+dependencies and no build step. It also multiplies the load on the volunteers
+running the receivers: one window is one polite query every few seconds, and a
+thousand windows is a thousand. The single shared cache that makes this
+well-behaved today only works because there is exactly one place to ask about.
+Solvable, but it is a different project, and it should be a deliberate choice
+rather than something that happens by accident.
+
 ## Running it yourself
 
 ```bash
