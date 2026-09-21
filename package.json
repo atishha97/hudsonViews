@@ -1,0 +1,15 @@
+{
+  "name": "hudson-window",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Identifies the planes and helicopters passing a window in Newport, Jersey City.",
+  "type": "module",
+  "main": "server.mjs",
+  "scripts": {
+    "start": "node server.mjs",
+    "demo": "node server.mjs --demo"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
