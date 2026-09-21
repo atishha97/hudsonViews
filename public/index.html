@@ -231,6 +231,12 @@ button.ghost[aria-pressed="true"] { border-color: var(--ink-3); color: var(--ink
   /* Sits in the sky, not across the horizon line it used to bisect. */
   bottom: 42%;
 }
+/* The script hides this note with el.hidden when something is drawn, and the
+   rule above was quietly cancelling that: a `display` declaration in a
+   stylesheet beats the browser's own `[hidden] { display: none }`, so the note
+   kept its grid box and its stale text sat over the pane while aircraft were
+   being drawn behind it. */
+.window .empty[hidden] { display: none; }
 
 .marker { cursor: pointer; }
 .marker .hit { fill: transparent; }
