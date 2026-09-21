@@ -3,6 +3,12 @@
 Identifies the ships, planes and helicopters passing my apartment window in
 Newport, Jersey City.
 
+![A Sikorsky S-76 named in a glass card on the left, with its shadow crossing the painted field on the right, over a figure looking up at it.](docs/screenshot.jpg)
+
+*Running on `--demo`, which is why the traffic is synthetic. The shadow is a
+real helicopter silhouette, turned to the aircraft's actual heading and blurred
+by its altitude.*
+
 The main view is an **illustrated field**: a figure standing on the grass, and
 the shadows of aircraft crossing over him as they pass. A shadow enters from the
 side the aircraft really is on, crosses the way it is really going, and is big
