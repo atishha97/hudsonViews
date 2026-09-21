@@ -26,23 +26,9 @@ The shadows crossing the grass are real aircraft. A shadow comes in from the
 side the plane is really on, travels the way it is really going, and grows as it
 gets closer. When a helicopter goes over, you see a helicopter.
 
-## The idea it took a while to find
-
-The first version told you where to look. Bearings, elevation angles, "over to
-your left, a little way up the sky".
-
-That was the wrong app. If a plane is overhead, you look up and you see it. You
-do not need an instrument to find something you are already looking at. The
-question a spotter actually has is **"what is that?"**, and everything that
-answered a different question came out.
-
-The same instinct drove the writing. My partner is the spotter; I am not. If he
-could not hand it to a friend and have them understand it, it was too technical.
-"Contact bearing 047, elevation 12 degrees" became a card that says what the
-aircraft is and something you did not know about it.
-
-The technical view still exists, folded away under *Show me the numbers*, for
-when you want it.
+If you do want the numbers, they are folded away under *Show me the numbers*:
+bearings, range, height and speed for everything in range, and a calibrated view
+of your window.
 
 ![The details panel open, showing the calibrated window view with an Airbus H135 marked in it, and the contact list below giving bearing, range, height and speed for each aircraft.](docs/screenshot-details.jpg)
 
